@@ -1,8 +1,62 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Play, Sparkles } from "lucide-react";
+import { ArrowRight, Play, Sparkles, ChevronDown, Building2, Factory, GraduationCap, HeartPulse, Truck, ShoppingBag, Briefcase, Hammer, Leaf, Plane, Utensils, Film, Landmark, Cpu, Home } from "lucide-react";
 import { Link } from "react-router-dom";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const industries = [
+  { value: "sme", label: "Small & Medium Enterprises", icon: Building2 },
+  { value: "manufacturing", label: "Manufacturing & Production", icon: Factory },
+  { value: "healthcare", label: "Healthcare & Medical", icon: HeartPulse },
+  { value: "education", label: "Education & Training", icon: GraduationCap },
+  { value: "logistics", label: "Logistics & Supply Chain", icon: Truck },
+  { value: "retail", label: "Retail & E-commerce", icon: ShoppingBag },
+  { value: "consulting", label: "Consulting & Professional Services", icon: Briefcase },
+  { value: "construction", label: "Construction & Real Estate", icon: Hammer },
+  { value: "agriculture", label: "Agriculture & Farming", icon: Leaf },
+  { value: "travel", label: "Travel & Hospitality", icon: Plane },
+  { value: "food", label: "Food & Beverage", icon: Utensils },
+  { value: "media", label: "Media & Entertainment", icon: Film },
+  { value: "finance", label: "Finance & Banking", icon: Landmark },
+  { value: "technology", label: "Technology & IT", icon: Cpu },
+  { value: "property", label: "Property Management", icon: Home },
+];
+
+const managementTypes = [
+  { value: "project", label: "Project Management" },
+  { value: "task", label: "Task & Workflow Management" },
+  { value: "team", label: "Team & HR Management" },
+  { value: "resource", label: "Resource & Asset Management" },
+  { value: "inventory", label: "Inventory Management" },
+  { value: "customer", label: "Customer Relationship (CRM)" },
+  { value: "sales", label: "Sales & Pipeline Management" },
+  { value: "finance", label: "Financial Management" },
+  { value: "operations", label: "Operations Management" },
+  { value: "quality", label: "Quality Control & Assurance" },
+  { value: "compliance", label: "Compliance & Risk Management" },
+  { value: "supply", label: "Supply Chain Management" },
+  { value: "vendor", label: "Vendor & Procurement" },
+  { value: "facility", label: "Facility Management" },
+  { value: "time", label: "Time & Attendance Tracking" },
+  { value: "performance", label: "Performance Management" },
+  { value: "document", label: "Document Management" },
+  { value: "communication", label: "Communication & Collaboration" },
+];
 
 export function Hero() {
+  const [selectedIndustry, setSelectedIndustry] = useState<string>("");
+  const [selectedManagement, setSelectedManagement] = useState<string>("");
+
+  const canStart = selectedIndustry && selectedManagement;
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background Effects */}
@@ -36,17 +90,120 @@ export function Hero() {
             our unified management platform. Built for SMEs to enterprises across every sector.
           </p>
 
-          {/* CTA Buttons */}
+          {/* Industry & Management Selectors */}
+          <div className="max-w-2xl mx-auto mb-10 animate-fade-in" style={{ animationDelay: "0.25s" }}>
+            <div className="p-6 rounded-2xl bg-card/80 backdrop-blur-xl border border-border shadow-lg">
+              <p className="text-sm text-muted-foreground mb-4">Select your industry and management needs to get started</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                {/* Industry Dropdown */}
+                <Select value={selectedIndustry} onValueChange={setSelectedIndustry}>
+                  <SelectTrigger className="h-12 bg-background border-border text-left">
+                    <SelectValue placeholder="Select your industry" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border-border max-h-80 z-50">
+                    <SelectGroup>
+                      <SelectLabel className="text-muted-foreground">Industries</SelectLabel>
+                      {industries.map((industry) => {
+                        const Icon = industry.icon;
+                        return (
+                          <SelectItem 
+                            key={industry.value} 
+                            value={industry.value}
+                            className="cursor-pointer"
+                          >
+                            <div className="flex items-center gap-2">
+                              <Icon className="w-4 h-4 text-primary" />
+                              <span>{industry.label}</span>
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+
+                {/* Management Type Dropdown */}
+                <Select value={selectedManagement} onValueChange={setSelectedManagement}>
+                  <SelectTrigger className="h-12 bg-background border-border text-left">
+                    <SelectValue placeholder="Select management type" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border-border max-h-80 z-50">
+                    <SelectGroup>
+                      <SelectLabel className="text-muted-foreground">Management Types</SelectLabel>
+                      {managementTypes.map((type) => (
+                        <SelectItem 
+                          key={type.value} 
+                          value={type.value}
+                          className="cursor-pointer"
+                        >
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Selected Summary */}
+              {(selectedIndustry || selectedManagement) && (
+                <div className="text-sm text-muted-foreground mb-4 p-3 rounded-lg bg-accent/50">
+                  {selectedIndustry && (
+                    <span className="inline-flex items-center gap-1 mr-2">
+                      <span className="text-foreground font-medium">
+                        {industries.find(i => i.value === selectedIndustry)?.label}
+                      </span>
+                    </span>
+                  )}
+                  {selectedIndustry && selectedManagement && <span>•</span>}
+                  {selectedManagement && (
+                    <span className="inline-flex items-center gap-1 ml-2">
+                      <span className="text-foreground font-medium">
+                        {managementTypes.find(t => t.value === selectedManagement)?.label}
+                      </span>
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Start Button */}
+              {canStart ? (
+                <Button 
+                  variant="hero" 
+                  size="lg" 
+                  className="w-full"
+                  asChild
+                >
+                  <Link to="/dashboard">
+                    Start Managing Your {industries.find(i => i.value === selectedIndustry)?.label.split(' ')[0]} Business
+                    <ArrowRight className="w-5 h-5" />
+                  </Link>
+                </Button>
+              ) : (
+                <Button 
+                  variant="hero" 
+                  size="lg" 
+                  className="w-full" 
+                  disabled
+                >
+                  Select Industry & Management Type
+                  <ChevronDown className="w-5 h-5" />
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Secondary CTA */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 animate-fade-in" style={{ animationDelay: "0.3s" }}>
-            <Button variant="hero" size="xl" asChild>
-              <Link to="/dashboard">
-                Get Started Free
-                <ArrowRight className="w-5 h-5" />
-              </Link>
-            </Button>
-            <Button variant="hero-outline" size="xl">
+            <Button variant="hero-outline" size="lg">
               <Play className="w-5 h-5" />
               Watch Demo
+            </Button>
+            <Button variant="subtle" size="lg" asChild>
+              <Link to="/dashboard">
+                Skip & Explore Dashboard
+                <ArrowRight className="w-4 h-4" />
+              </Link>
             </Button>
           </div>
 
