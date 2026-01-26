@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   LayoutDashboard,
   CheckSquare,
@@ -12,9 +11,11 @@ import {
   ChevronRight,
   LogOut,
 } from "lucide-react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -37,12 +38,24 @@ interface DashboardSidebarProps {
 
 export function DashboardSidebar({ collapsed, onToggle }: DashboardSidebarProps) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { signOut, user, role } = useAuth();
+  const { toast } = useToast();
 
   const isActive = (href: string) => {
     if (href === "/dashboard") {
       return location.pathname === "/dashboard";
     }
     return location.pathname.startsWith(href);
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    toast({
+      title: "Logged out",
+      description: "You have been successfully logged out.",
+    });
+    navigate("/");
   };
 
   return (
@@ -76,6 +89,20 @@ export function DashboardSidebar({ collapsed, onToggle }: DashboardSidebarProps)
           )}
         </button>
       </div>
+
+      {/* User Info */}
+      {!collapsed && user && (
+        <div className="px-4 py-3 border-b border-sidebar-border">
+          <p className="text-sm font-medium text-sidebar-foreground truncate">
+            {user.email}
+          </p>
+          {role && (
+            <p className="text-xs text-sidebar-foreground/60 capitalize">
+              {role}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Main Navigation */}
       <nav className="flex-1 py-4 px-3 overflow-y-auto">
@@ -119,6 +146,7 @@ export function DashboardSidebar({ collapsed, onToggle }: DashboardSidebarProps)
           
           <Button
             variant="ghost"
+            onClick={handleLogout}
             className={cn(
               "w-full justify-start gap-3 px-3 py-2.5 h-auto text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
               collapsed && "justify-center px-0"
