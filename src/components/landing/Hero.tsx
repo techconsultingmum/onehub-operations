@@ -174,7 +174,7 @@ export function Hero() {
                   className="w-full"
                   asChild
                 >
-                  <Link to="/dashboard">
+                  <Link to={`/auth?industry=${selectedIndustry}&management=${selectedManagement}`}>
                     Start Managing Your {industries.find(i => i.value === selectedIndustry)?.label.split(' ')[0]} Business
                     <ArrowRight className="w-5 h-5" />
                   </Link>
@@ -200,8 +200,8 @@ export function Hero() {
               Watch Demo
             </Button>
             <Button variant="subtle" size="lg" asChild>
-              <Link to="/dashboard">
-                Skip & Explore Dashboard
+              <Link to="/auth">
+                Sign In
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </Button>

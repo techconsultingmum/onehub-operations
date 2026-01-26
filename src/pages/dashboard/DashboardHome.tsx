@@ -1,4 +1,5 @@
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   TrendingUp,
   Users,
@@ -6,6 +7,8 @@ import {
   Clock,
   ArrowUpRight,
   ArrowDownRight,
+  Building2,
+  Settings2,
 } from "lucide-react";
 import {
   AreaChart,
@@ -18,6 +21,45 @@ import {
   BarChart,
   Bar,
 } from "recharts";
+
+const industryLabels: Record<string, string> = {
+  sme: "SME / Small Business",
+  manufacturing: "Manufacturing",
+  healthcare: "Healthcare",
+  education: "Education",
+  logistics: "Logistics & Transportation",
+  retail: "Retail & E-commerce",
+  consulting: "Consulting",
+  construction: "Construction",
+  agriculture: "Agriculture",
+  travel: "Travel & Hospitality",
+  food: "Food & Beverage",
+  media: "Media & Entertainment",
+  finance: "Finance & Banking",
+  technology: "Technology & IT",
+  property: "Property Management",
+};
+
+const managementLabels: Record<string, string> = {
+  project: "Project Management",
+  task: "Task Management",
+  team: "Team Management",
+  resource: "Resource Management",
+  inventory: "Inventory Management",
+  crm: "CRM",
+  sales: "Sales Management",
+  finance: "Finance & Accounting",
+  operations: "Operations",
+  quality: "Quality Management",
+  compliance: "Compliance & Risk",
+  "supply-chain": "Supply Chain",
+  vendor: "Vendor Management",
+  facility: "Facility Management",
+  time: "Time & Attendance",
+  performance: "Performance",
+  document: "Document Management",
+  communication: "Communication",
+};
 
 const stats = [
   {
@@ -122,14 +164,41 @@ const priorityColors = {
 };
 
 export default function DashboardHome() {
+  const { user, configuration, role } = useAuth();
+
+  const userName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "User";
+
   return (
     <div>
       <DashboardHeader
         title="Dashboard"
-        subtitle="Welcome back, John. Here's what's happening."
+        subtitle={`Welcome back, ${userName}. Here's what's happening.`}
       />
 
       <div className="p-6 space-y-6">
+        {/* Configuration Badge */}
+        {configuration && (
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-sm">
+              <Building2 className="w-4 h-4 text-primary" />
+              <span className="text-foreground font-medium">
+                {industryLabels[configuration.industry] || configuration.industry}
+              </span>
+            </div>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent border border-border text-sm">
+              <Settings2 className="w-4 h-4 text-muted-foreground" />
+              <span className="text-foreground font-medium">
+                {managementLabels[configuration.management_type] || configuration.management_type}
+              </span>
+            </div>
+            {role && (
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-success/10 border border-success/20 text-sm">
+                <span className="text-success font-medium capitalize">{role}</span>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {stats.map((stat) => (
