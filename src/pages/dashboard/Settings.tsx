@@ -1,11 +1,164 @@
+import { useState, useEffect } from "react";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2, Plus, X, Building2, Settings2 } from "lucide-react";
+
+const industries = [
+  { value: "sme", label: "SME / Small Business" },
+  { value: "manufacturing", label: "Manufacturing" },
+  { value: "healthcare", label: "Healthcare" },
+  { value: "education", label: "Education" },
+  { value: "logistics", label: "Logistics & Transportation" },
+  { value: "retail", label: "Retail & E-commerce" },
+  { value: "consulting", label: "Consulting & Professional Services" },
+  { value: "construction", label: "Construction & Real Estate" },
+  { value: "agriculture", label: "Agriculture & Farming" },
+  { value: "travel", label: "Travel & Hospitality" },
+  { value: "food", label: "Food & Beverage" },
+  { value: "media", label: "Media & Entertainment" },
+  { value: "finance", label: "Finance & Banking" },
+  { value: "technology", label: "Technology & IT" },
+  { value: "property", label: "Property Management" },
+];
+
+const managementTypes = [
+  { value: "project", label: "Project Management" },
+  { value: "task", label: "Task Management" },
+  { value: "team", label: "Team Management" },
+  { value: "resource", label: "Resource Management" },
+  { value: "inventory", label: "Inventory Management" },
+  { value: "crm", label: "CRM (Customer Relationship)" },
+  { value: "sales", label: "Sales Management" },
+  { value: "finance", label: "Finance & Accounting" },
+  { value: "operations", label: "Operations Management" },
+  { value: "quality", label: "Quality Management" },
+  { value: "compliance", label: "Compliance & Risk" },
+  { value: "supply-chain", label: "Supply Chain Management" },
+  { value: "vendor", label: "Vendor Management" },
+  { value: "facility", label: "Facility Management" },
+  { value: "time", label: "Time & Attendance" },
+  { value: "performance", label: "Performance Management" },
+  { value: "document", label: "Document Management" },
+  { value: "communication", label: "Communication Management" },
+];
 
 export default function SettingsPage() {
+  const { user, configuration, updateAdditionalManagementTypes } = useAuth();
+  const { toast } = useToast();
+  
+  const [additionalTypes, setAdditionalTypes] = useState<string[]>(
+    configuration?.additional_management_types || []
+  );
+  const [showAdditional, setShowAdditional] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [notificationPrefs, setNotificationPrefs] = useState({
+    email_notifications: true,
+    push_notifications: true,
+    weekly_digest: false,
+  });
+
+  useEffect(() => {
+    if (configuration?.additional_management_types) {
+      setAdditionalTypes(configuration.additional_management_types);
+    }
+    fetchNotificationPrefs();
+  }, [configuration]);
+
+  const fetchNotificationPrefs = async () => {
+    if (!user) return;
+    
+    const { data } = await supabase
+      .from("notification_preferences")
+      .select("email_notifications, push_notifications, weekly_digest")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (data) {
+      setNotificationPrefs(data);
+    }
+  };
+
+  const handleAdditionalTypeToggle = (type: string) => {
+    if (type === configuration?.management_type) return;
+    
+    setAdditionalTypes(prev => 
+      prev.includes(type) 
+        ? prev.filter(t => t !== type)
+        : [...prev, type]
+    );
+  };
+
+  const removeAdditionalType = (type: string) => {
+    setAdditionalTypes(prev => prev.filter(t => t !== type));
+  };
+
+  const saveManagementTypes = async () => {
+    setIsSaving(true);
+    const { error } = await updateAdditionalManagementTypes(additionalTypes);
+    setIsSaving(false);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update management types.",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Saved",
+        description: "Your management types have been updated.",
+      });
+      setShowAdditional(false);
+    }
+  };
+
+  const updateNotificationPref = async (key: string, value: boolean) => {
+    if (!user) return;
+
+    setNotificationPrefs(prev => ({ ...prev, [key]: value }));
+
+    const { error } = await supabase
+      .from("notification_preferences")
+      .upsert({
+        user_id: user.id,
+        ...notificationPrefs,
+        [key]: value,
+      }, {
+        onConflict: "user_id",
+      });
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update notification preferences.",
+        variant: "destructive",
+      });
+      setNotificationPrefs(prev => ({ ...prev, [key]: !value }));
+    }
+  };
+
+  const displayName = user?.user_metadata?.full_name || "";
+  const [firstName, lastName] = displayName.split(" ").length > 1 
+    ? [displayName.split(" ")[0], displayName.split(" ").slice(1).join(" ")]
+    : [displayName, ""];
+  const initials = displayName.slice(0, 2).toUpperCase() || "U";
+
+  const currentIndustry = industries.find(i => i.value === configuration?.industry);
+  const currentPrimaryType = managementTypes.find(t => t.value === configuration?.management_type);
+  const availableAdditionalTypes = managementTypes.filter(
+    t => t.value !== configuration?.management_type && !additionalTypes.includes(t.value)
+  );
+
   return (
     <div>
       <DashboardHeader
@@ -13,36 +166,169 @@ export default function SettingsPage() {
         subtitle="Manage your account and preferences"
       />
 
-      <div className="p-6 max-w-3xl">
+      <div className="p-6 max-w-3xl space-y-6">
         {/* Profile Section */}
-        <div className="bg-card border border-border rounded-xl p-6 mb-6">
+        <div className="bg-card border border-border rounded-xl p-6">
           <h3 className="font-semibold mb-4">Profile</h3>
           <div className="space-y-4">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="text-2xl font-bold text-primary">JD</span>
+                <span className="text-2xl font-bold text-primary">{initials}</span>
               </div>
               <Button variant="outline">Change Avatar</Button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="firstName">First Name</Label>
-                <Input id="firstName" defaultValue="John" />
+                <Input id="firstName" defaultValue={firstName} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lastName">Last Name</Label>
-                <Input id="lastName" defaultValue="Doe" />
+                <Input id="lastName" defaultValue={lastName} />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" defaultValue="john.doe@managex.io" />
+              <Input id="email" type="email" value={user?.email || ""} disabled />
+            </div>
+          </div>
+        </div>
+
+        {/* Industry & Management Configuration */}
+        <div className="bg-card border border-border rounded-xl p-6">
+          <h3 className="font-semibold mb-4 flex items-center gap-2">
+            <Building2 className="h-5 w-5 text-primary" />
+            Industry & Management
+          </h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Industry</p>
+                <p className="text-sm text-muted-foreground">
+                  {currentIndustry?.label || "Not set"}
+                </p>
+              </div>
+              <Badge variant="secondary">{currentIndustry?.label}</Badge>
+            </div>
+            <Separator />
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Primary Management Type</p>
+                <p className="text-sm text-muted-foreground">
+                  {currentPrimaryType?.label || "Not set"}
+                </p>
+              </div>
+              <Badge>{currentPrimaryType?.label}</Badge>
+            </div>
+            <Separator />
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium flex items-center gap-2">
+                    <Settings2 className="h-4 w-4 text-primary" />
+                    Additional Management Types
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Add more management modules to your dashboard
+                  </p>
+                </div>
+                {!showAdditional && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAdditional(true)}
+                    className="gap-1"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add More
+                  </Button>
+                )}
+              </div>
+
+              {/* Current Additional Types */}
+              {additionalTypes.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {additionalTypes.map(type => {
+                    const typeInfo = managementTypes.find(t => t.value === type);
+                    return (
+                      <Badge 
+                        key={type} 
+                        variant="secondary"
+                        className="gap-1 pr-1"
+                      >
+                        {typeInfo?.label}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-4 w-4 hover:bg-transparent"
+                          onClick={() => removeAdditionalType(type)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </Badge>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Additional Types Selection */}
+              {showAdditional && (
+                <div className="border border-border rounded-lg p-4 bg-muted/30 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm">Select additional types</Label>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                    {availableAdditionalTypes.map(type => (
+                      <div key={type.value} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`add-${type.value}`}
+                          checked={additionalTypes.includes(type.value)}
+                          onCheckedChange={() => handleAdditionalTypeToggle(type.value)}
+                        />
+                        <label
+                          htmlFor={`add-${type.value}`}
+                          className="text-sm font-medium leading-none cursor-pointer"
+                        >
+                          {type.label}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <Button 
+                      onClick={saveManagementTypes} 
+                      disabled={isSaving}
+                      size="sm"
+                    >
+                      {isSaving ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        "Save Changes"
+                      )}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        setShowAdditional(false);
+                        setAdditionalTypes(configuration?.additional_management_types || []);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         {/* Notifications Section */}
-        <div className="bg-card border border-border rounded-xl p-6 mb-6">
+        <div className="bg-card border border-border rounded-xl p-6">
           <h3 className="font-semibold mb-4">Notifications</h3>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -52,7 +338,10 @@ export default function SettingsPage() {
                   Receive email updates about your tasks
                 </p>
               </div>
-              <Switch defaultChecked />
+              <Switch 
+                checked={notificationPrefs.email_notifications}
+                onCheckedChange={(v) => updateNotificationPref("email_notifications", v)}
+              />
             </div>
             <Separator />
             <div className="flex items-center justify-between">
@@ -62,7 +351,10 @@ export default function SettingsPage() {
                   Get notified about important updates
                 </p>
               </div>
-              <Switch defaultChecked />
+              <Switch 
+                checked={notificationPrefs.push_notifications}
+                onCheckedChange={(v) => updateNotificationPref("push_notifications", v)}
+              />
             </div>
             <Separator />
             <div className="flex items-center justify-between">
@@ -72,7 +364,10 @@ export default function SettingsPage() {
                   Receive a weekly summary of your progress
                 </p>
               </div>
-              <Switch />
+              <Switch 
+                checked={notificationPrefs.weekly_digest}
+                onCheckedChange={(v) => updateNotificationPref("weekly_digest", v)}
+              />
             </div>
           </div>
         </div>
@@ -89,11 +384,6 @@ export default function SettingsPage() {
             </div>
             <Button variant="destructive">Delete Account</Button>
           </div>
-        </div>
-
-        {/* Save Button */}
-        <div className="flex justify-end mt-6">
-          <Button>Save Changes</Button>
         </div>
       </div>
     </div>

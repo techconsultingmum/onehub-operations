@@ -1,6 +1,8 @@
-import { Bell, Search, User } from "lucide-react";
+import { Search, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NotificationBell } from "./NotificationBell";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface DashboardHeaderProps {
   title: string;
@@ -8,6 +10,11 @@ interface DashboardHeaderProps {
 }
 
 export function DashboardHeader({ title, subtitle }: DashboardHeaderProps) {
+  const { user } = useAuth();
+  
+  const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "User";
+  const initials = displayName.slice(0, 2).toUpperCase();
+
   return (
     <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border">
       <div className="flex items-center justify-between h-16 px-6">
@@ -32,17 +39,14 @@ export function DashboardHeader({ title, subtitle }: DashboardHeaderProps) {
           </div>
 
           {/* Notifications */}
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />
-          </Button>
+          <NotificationBell />
 
           {/* User */}
           <Button variant="ghost" className="gap-2">
             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <User className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium text-primary">{initials}</span>
             </div>
-            <span className="hidden md:inline text-sm font-medium">John Doe</span>
+            <span className="hidden md:inline text-sm font-medium">{displayName}</span>
           </Button>
         </div>
       </div>

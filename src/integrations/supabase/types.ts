@@ -14,6 +14,156 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_feed: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_name: string | null
+          entity_type: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_name?: string | null
+          entity_type: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_name?: string | null
+          entity_type?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      data_imports: {
+        Row: {
+          column_mapping: Json
+          completed_at: string | null
+          created_at: string
+          error_details: Json | null
+          failed_rows: number
+          file_name: string
+          id: string
+          imported_rows: number
+          status: string
+          target_table: string
+          total_rows: number
+          user_id: string
+        }
+        Insert: {
+          column_mapping: Json
+          completed_at?: string | null
+          created_at?: string
+          error_details?: Json | null
+          failed_rows?: number
+          file_name: string
+          id?: string
+          imported_rows?: number
+          status?: string
+          target_table: string
+          total_rows?: number
+          user_id: string
+        }
+        Update: {
+          column_mapping?: Json
+          completed_at?: string | null
+          created_at?: string
+          error_details?: Json | null
+          failed_rows?: number
+          file_name?: string
+          id?: string
+          imported_rows?: number
+          status?: string
+          target_table?: string
+          total_rows?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notification_preferences: {
+        Row: {
+          created_at: string
+          email_notifications: boolean
+          id: string
+          push_notifications: boolean
+          task_updates: boolean
+          team_updates: boolean
+          updated_at: string
+          user_id: string
+          weekly_digest: boolean
+        }
+        Insert: {
+          created_at?: string
+          email_notifications?: boolean
+          id?: string
+          push_notifications?: boolean
+          task_updates?: boolean
+          team_updates?: boolean
+          updated_at?: string
+          user_id: string
+          weekly_digest?: boolean
+        }
+        Update: {
+          created_at?: string
+          email_notifications?: boolean
+          id?: string
+          push_notifications?: boolean
+          task_updates?: boolean
+          team_updates?: boolean
+          updated_at?: string
+          user_id?: string
+          weekly_digest?: boolean
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          link: string | null
+          message: string
+          metadata: Json | null
+          read: boolean
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          link?: string | null
+          message: string
+          metadata?: Json | null
+          read?: boolean
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          link?: string | null
+          message?: string
+          metadata?: Json | null
+          read?: boolean
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -121,6 +271,7 @@ export type Database = {
       }
       user_configurations: {
         Row: {
+          additional_management_types: string[] | null
           created_at: string
           id: string
           industry: string
@@ -129,6 +280,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          additional_management_types?: string[] | null
           created_at?: string
           id?: string
           industry: string
@@ -137,6 +289,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          additional_management_types?: string[] | null
           created_at?: string
           id?: string
           industry?: string
@@ -163,6 +316,98 @@ export type Database = {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      webhook_logs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          event_type: string
+          id: string
+          payload: Json
+          response_body: string | null
+          response_status: number | null
+          success: boolean
+          user_id: string
+          webhook_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          event_type: string
+          id?: string
+          payload: Json
+          response_body?: string | null
+          response_status?: number | null
+          success?: boolean
+          user_id: string
+          webhook_id: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json
+          response_body?: string | null
+          response_status?: number | null
+          success?: boolean
+          user_id?: string
+          webhook_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_logs_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "webhooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhooks: {
+        Row: {
+          created_at: string
+          events: string[]
+          headers: Json | null
+          id: string
+          is_active: boolean
+          last_triggered_at: string | null
+          name: string
+          secret_key: string | null
+          type: string
+          updated_at: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          events?: string[]
+          headers?: Json | null
+          id?: string
+          is_active?: boolean
+          last_triggered_at?: string | null
+          name: string
+          secret_key?: string | null
+          type?: string
+          updated_at?: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          events?: string[]
+          headers?: Json | null
+          id?: string
+          is_active?: boolean
+          last_triggered_at?: string | null
+          name?: string
+          secret_key?: string | null
+          type?: string
+          updated_at?: string
+          url?: string
           user_id?: string
         }
         Relationships: []
