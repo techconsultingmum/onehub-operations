@@ -191,6 +191,19 @@ export default function DashboardHome() {
                 {managementLabels[configuration.management_type] || configuration.management_type}
               </span>
             </div>
+            {/* Additional Management Types */}
+            {configuration.additional_management_types && configuration.additional_management_types.length > 0 && (
+              configuration.additional_management_types.map(type => (
+                <div 
+                  key={type}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted border border-border text-sm"
+                >
+                  <span className="text-muted-foreground font-medium">
+                    {managementLabels[type] || type}
+                  </span>
+                </div>
+              ))
+            )}
             {role && (
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-success/10 border border-success/20 text-sm">
                 <span className="text-success font-medium capitalize">{role}</span>

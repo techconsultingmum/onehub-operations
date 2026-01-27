@@ -14,6 +14,9 @@ import Tasks from "./pages/dashboard/Tasks";
 import Team from "./pages/dashboard/Team";
 import Reports from "./pages/dashboard/Reports";
 import SettingsPage from "./pages/dashboard/Settings";
+import DataImport from "./pages/dashboard/DataImport";
+import Webhooks from "./pages/dashboard/Webhooks";
+import Notifications from "./pages/dashboard/Notifications";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +46,9 @@ const App = () => (
               <Route path="team" element={<Team />} />
               <Route path="reports" element={<Reports />} />
               <Route path="settings" element={<SettingsPage />} />
+              <Route path="import" element={<DataImport />} />
+              <Route path="webhooks" element={<Webhooks />} />
+              <Route path="notifications" element={<Notifications />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

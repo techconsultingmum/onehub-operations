@@ -1,12 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Building2, Settings2 } from "lucide-react";
+import { Loader2, Building2, Settings2, Plus, X } from "lucide-react";
 
 const industries = [
   { value: "sme", label: "SME / Small Business" },
@@ -50,26 +52,43 @@ const managementTypes = [
 export default function Onboarding() {
   const [searchParams] = useSearchParams();
   const [industry, setIndustry] = useState(searchParams.get("industry") || "");
-  const [managementType, setManagementType] = useState(searchParams.get("management") || "");
+  const [primaryManagementType, setPrimaryManagementType] = useState(searchParams.get("management") || "");
+  const [additionalTypes, setAdditionalTypes] = useState<string[]>([]);
+  const [showAdditional, setShowAdditional] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
   const { user, configuration, saveConfiguration, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate("/auth");
-    }
-    if (!loading && configuration) {
-      navigate("/dashboard");
-    }
-  }, [user, configuration, loading, navigate]);
+  // Redirect if not authenticated or already configured
+  if (!loading && !user) {
+    navigate("/auth");
+    return null;
+  }
+  if (!loading && configuration) {
+    navigate("/dashboard");
+    return null;
+  }
+
+  const handleAdditionalTypeToggle = (type: string) => {
+    if (type === primaryManagementType) return; // Can't add primary as additional
+    
+    setAdditionalTypes(prev => 
+      prev.includes(type) 
+        ? prev.filter(t => t !== type)
+        : [...prev, type]
+    );
+  };
+
+  const removeAdditionalType = (type: string) => {
+    setAdditionalTypes(prev => prev.filter(t => t !== type));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!industry || !managementType) {
+    if (!industry || !primaryManagementType) {
       toast({
         title: "Selection Required",
         description: "Please select both an industry and management type.",
@@ -79,7 +98,7 @@ export default function Onboarding() {
     }
 
     setIsLoading(true);
-    const { error } = await saveConfiguration(industry, managementType);
+    const { error } = await saveConfiguration(industry, primaryManagementType, additionalTypes);
     setIsLoading(false);
 
     if (error) {
@@ -104,6 +123,10 @@ export default function Onboarding() {
       </div>
     );
   }
+
+  const availableAdditionalTypes = managementTypes.filter(
+    t => t.value !== primaryManagementType && !additionalTypes.includes(t.value)
+  );
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -148,9 +171,13 @@ export default function Onboarding() {
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 <Settings2 className="h-4 w-4 text-primary" />
-                Management Type
+                Primary Management Type
               </Label>
-              <Select value={managementType} onValueChange={setManagementType}>
+              <Select value={primaryManagementType} onValueChange={(v) => {
+                setPrimaryManagementType(v);
+                // Remove from additional if it was there
+                setAdditionalTypes(prev => prev.filter(t => t !== v));
+              }}>
                 <SelectTrigger className="bg-background">
                   <SelectValue placeholder="Select management focus" />
                 </SelectTrigger>
@@ -163,6 +190,90 @@ export default function Onboarding() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Additional Management Types */}
+            {primaryManagementType && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm text-muted-foreground">
+                    Additional Management Types (Optional)
+                  </Label>
+                  {!showAdditional && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowAdditional(true)}
+                      className="gap-1 text-primary"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add More
+                    </Button>
+                  )}
+                </div>
+
+                {/* Selected Additional Types */}
+                {additionalTypes.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {additionalTypes.map(type => {
+                      const typeInfo = managementTypes.find(t => t.value === type);
+                      return (
+                        <Badge 
+                          key={type} 
+                          variant="secondary"
+                          className="gap-1 pr-1"
+                        >
+                          {typeInfo?.label}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-4 w-4 hover:bg-transparent"
+                            onClick={() => removeAdditionalType(type)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Additional Types Selection */}
+                {showAdditional && (
+                  <div className="border border-border rounded-lg p-4 bg-muted/30 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm">Select additional types</Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowAdditional(false)}
+                      >
+                        Done
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                      {availableAdditionalTypes.map(type => (
+                        <div key={type.value} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`add-${type.value}`}
+                            checked={additionalTypes.includes(type.value)}
+                            onCheckedChange={() => handleAdditionalTypeToggle(type.value)}
+                          />
+                          <label
+                            htmlFor={`add-${type.value}`}
+                            className="text-sm font-medium leading-none cursor-pointer"
+                          >
+                            {type.label}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (

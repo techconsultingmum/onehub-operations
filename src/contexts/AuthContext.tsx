@@ -7,6 +7,7 @@ type AppRole = "admin" | "manager" | "staff" | "viewer";
 interface UserConfiguration {
   industry: string;
   management_type: string;
+  additional_management_types?: string[];
 }
 
 interface AuthContextType {
@@ -18,7 +19,8 @@ interface AuthContextType {
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
-  saveConfiguration: (industry: string, managementType: string) => Promise<{ error: Error | null }>;
+  saveConfiguration: (industry: string, managementType: string, additionalTypes?: string[]) => Promise<{ error: Error | null }>;
+  updateAdditionalManagementTypes: (types: string[]) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -79,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchUserConfiguration = async (userId: string) => {
     const { data, error } = await supabase
       .from("user_configurations")
-      .select("industry, management_type")
+      .select("industry, management_type, additional_management_types")
       .eq("user_id", userId)
       .maybeSingle();
 
@@ -87,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setConfiguration({
         industry: data.industry,
         management_type: data.management_type,
+        additional_management_types: data.additional_management_types || [],
       });
     }
   };
@@ -123,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setConfiguration(null);
   };
 
-  const saveConfiguration = async (industry: string, managementType: string) => {
+  const saveConfiguration = async (industry: string, managementType: string, additionalTypes: string[] = []) => {
     if (!user) return { error: new Error("Not authenticated") };
 
     const { error } = await supabase
@@ -132,12 +135,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user_id: user.id,
         industry,
         management_type: managementType,
+        additional_management_types: additionalTypes,
       }, {
         onConflict: "user_id",
       });
 
     if (!error) {
-      setConfiguration({ industry, management_type: managementType });
+      setConfiguration({ 
+        industry, 
+        management_type: managementType,
+        additional_management_types: additionalTypes,
+      });
+    }
+
+    return { error: error as Error | null };
+  };
+
+  const updateAdditionalManagementTypes = async (types: string[]) => {
+    if (!user) return { error: new Error("Not authenticated") };
+
+    const { error } = await supabase
+      .from("user_configurations")
+      .update({ additional_management_types: types })
+      .eq("user_id", user.id);
+
+    if (!error && configuration) {
+      setConfiguration({ 
+        ...configuration,
+        additional_management_types: types,
+      });
     }
 
     return { error: error as Error | null };
@@ -155,6 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signIn,
         signOut,
         saveConfiguration,
+        updateAdditionalManagementTypes,
       }}
     >
       {children}
