@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Building2, Settings2, Plus, X } from "lucide-react";
+import { Loader2, Building2, Settings2, Plus, X, ArrowLeft } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const industries = [
   { value: "sme", label: "SME / Small Business" },
@@ -61,18 +62,22 @@ export default function Onboarding() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Redirect if not authenticated or already configured
-  if (!loading && !user) {
-    navigate("/auth");
-    return null;
-  }
-  if (!loading && configuration) {
-    navigate("/dashboard");
-    return null;
-  }
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate("/auth");
+    }
+  }, [loading, user, navigate]);
+
+  // Redirect if already configured
+  useEffect(() => {
+    if (!loading && configuration) {
+      navigate("/dashboard");
+    }
+  }, [loading, configuration, navigate]);
 
   const handleAdditionalTypeToggle = (type: string) => {
-    if (type === primaryManagementType) return; // Can't add primary as additional
+    if (type === primaryManagementType) return;
     
     setAdditionalTypes(prev => 
       prev.includes(type) 
@@ -124,6 +129,10 @@ export default function Onboarding() {
     );
   }
 
+  if (!user) {
+    return null;
+  }
+
   const availableAdditionalTypes = managementTypes.filter(
     t => t.value !== primaryManagementType && !additionalTypes.includes(t.value)
   );
@@ -158,7 +167,7 @@ export default function Onboarding() {
                 <SelectTrigger className="bg-background">
                   <SelectValue placeholder="Select your industry" />
                 </SelectTrigger>
-                <SelectContent className="bg-background border-border z-50">
+                <SelectContent className="bg-background border-border z-50 max-h-60">
                   {industries.map((ind) => (
                     <SelectItem key={ind.value} value={ind.value}>
                       {ind.label}
@@ -175,13 +184,12 @@ export default function Onboarding() {
               </Label>
               <Select value={primaryManagementType} onValueChange={(v) => {
                 setPrimaryManagementType(v);
-                // Remove from additional if it was there
                 setAdditionalTypes(prev => prev.filter(t => t !== v));
               }}>
                 <SelectTrigger className="bg-background">
                   <SelectValue placeholder="Select management focus" />
                 </SelectTrigger>
-                <SelectContent className="bg-background border-border z-50">
+                <SelectContent className="bg-background border-border z-50 max-h-60">
                   {managementTypes.map((type) => (
                     <SelectItem key={type.value} value={type.value}>
                       {type.label}
@@ -253,7 +261,7 @@ export default function Onboarding() {
                         Done
                       </Button>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto">
                       {availableAdditionalTypes.map(type => (
                         <div key={type.value} className="flex items-center space-x-2">
                           <Checkbox
@@ -263,7 +271,7 @@ export default function Onboarding() {
                           />
                           <label
                             htmlFor={`add-${type.value}`}
-                            className="text-sm font-medium leading-none cursor-pointer"
+                            className="text-sm font-medium leading-none cursor-pointer truncate"
                           >
                             {type.label}
                           </label>

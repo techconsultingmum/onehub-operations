@@ -6,6 +6,8 @@ import { Link } from "react-router-dom";
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
 
+  const closeMenu = () => setIsOpen(false);
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50">
       <div className="container px-4">
@@ -34,10 +36,10 @@ export function Navbar() {
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center gap-3">
             <Button variant="ghost" asChild>
-              <Link to="/login">Log in</Link>
+              <Link to="/auth">Log in</Link>
             </Button>
             <Button asChild>
-              <Link to="/dashboard">Get Started</Link>
+              <Link to="/auth">Get Started</Link>
             </Button>
           </div>
 
@@ -45,6 +47,7 @@ export function Navbar() {
           <button
             onClick={() => setIsOpen(!isOpen)}
             className="md:hidden p-2 rounded-lg hover:bg-muted transition-colors"
+            aria-label={isOpen ? "Close menu" : "Open menu"}
           >
             {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -52,23 +55,35 @@ export function Navbar() {
 
         {/* Mobile Menu */}
         {isOpen && (
-          <div className="md:hidden py-4 border-t border-border">
+          <div className="md:hidden py-4 border-t border-border animate-fade-in">
             <div className="flex flex-col gap-4">
-              <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <a 
+                href="#features" 
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                onClick={closeMenu}
+              >
                 Features
               </a>
-              <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <a 
+                href="#pricing" 
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                onClick={closeMenu}
+              >
                 Pricing
               </a>
-              <a href="#about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <a 
+                href="#about" 
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                onClick={closeMenu}
+              >
                 About
               </a>
               <div className="flex flex-col gap-2 pt-4 border-t border-border">
                 <Button variant="outline" className="w-full" asChild>
-                  <Link to="/login">Log in</Link>
+                  <Link to="/auth" onClick={closeMenu}>Log in</Link>
                 </Button>
                 <Button className="w-full" asChild>
-                  <Link to="/dashboard">Get Started</Link>
+                  <Link to="/auth" onClick={closeMenu}>Get Started</Link>
                 </Button>
               </div>
             </div>
