@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,17 +7,19 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { z } from "zod";
 import { Link } from "react-router-dom";
 
-const emailSchema = z.string().email("Please enter a valid email address");
+const emailSchema = z.string().trim().email("Please enter a valid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
-const nameSchema = z.string().min(2, "Name must be at least 2 characters");
+const nameSchema = z.string().trim().min(2, "Name must be at least 2 characters").max(100, "Name is too long");
 
 export default function Auth() {
+  const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("login");
+  const [showPassword, setShowPassword] = useState(false);
   
   // Login form
   const [loginEmail, setLoginEmail] = useState("");
@@ -28,15 +30,27 @@ export default function Auth() {
   const [signupPassword, setSignupPassword] = useState("");
   const [signupName, setSignupName] = useState("");
   
-  const { signIn, signUp, user } = useAuth();
+  const { signIn, signUp, user, configuration } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Get industry and management from URL params (from landing page)
+  const industryParam = searchParams.get("industry");
+  const managementParam = searchParams.get("management");
+
   useEffect(() => {
     if (user) {
-      navigate("/dashboard");
+      // Check if user has configuration, if not redirect to onboarding
+      if (!configuration) {
+        const onboardingUrl = industryParam && managementParam 
+          ? `/onboarding?industry=${industryParam}&management=${managementParam}`
+          : "/onboarding";
+        navigate(onboardingUrl);
+      } else {
+        navigate("/dashboard");
+      }
     }
-  }, [user, navigate]);
+  }, [user, configuration, navigate, industryParam, managementParam]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,13 +70,15 @@ export default function Auth() {
     }
 
     setIsLoading(true);
-    const { error } = await signIn(loginEmail, loginPassword);
+    const { error } = await signIn(loginEmail.trim(), loginPassword);
     setIsLoading(false);
 
     if (error) {
       let message = error.message;
       if (message.includes("Invalid login credentials")) {
         message = "Invalid email or password. Please try again.";
+      } else if (message.includes("Email not confirmed")) {
+        message = "Please verify your email address before logging in.";
       }
       toast({
         title: "Login Failed",
@@ -74,7 +90,6 @@ export default function Auth() {
         title: "Welcome back!",
         description: "You have successfully logged in.",
       });
-      navigate("/dashboard");
     }
   };
 
@@ -97,13 +112,15 @@ export default function Auth() {
     }
 
     setIsLoading(true);
-    const { error } = await signUp(signupEmail, signupPassword, signupName);
+    const { error } = await signUp(signupEmail.trim(), signupPassword, signupName.trim());
     setIsLoading(false);
 
     if (error) {
       let message = error.message;
       if (message.includes("User already registered")) {
         message = "An account with this email already exists. Please log in instead.";
+      } else if (message.includes("Password should be")) {
+        message = "Password must be at least 6 characters.";
       }
       toast({
         title: "Signup Failed",
@@ -113,9 +130,9 @@ export default function Auth() {
     } else {
       toast({
         title: "Account Created!",
-        description: "Welcome to ManageX. You can now access the dashboard.",
+        description: "Welcome to ManageX. Let's set up your workspace.",
       });
-      navigate("/dashboard");
+      // The useEffect will handle navigation once user state updates
     }
   };
 
@@ -165,18 +182,33 @@ export default function Auth() {
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
                       required
+                      autoComplete="email"
+                      disabled={isLoading}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="login-password">Password</Label>
-                    <Input
-                      id="login-password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={loginPassword}
-                      onChange={(e) => setLoginPassword(e.target.value)}
-                      required
-                    />
+                    <div className="relative">
+                      <Input
+                        id="login-password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        required
+                        autoComplete="current-password"
+                        disabled={isLoading}
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        tabIndex={-1}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? (
@@ -202,6 +234,9 @@ export default function Auth() {
                       value={signupName}
                       onChange={(e) => setSignupName(e.target.value)}
                       required
+                      autoComplete="name"
+                      disabled={isLoading}
+                      maxLength={100}
                     />
                   </div>
                   <div className="space-y-2">
@@ -213,18 +248,37 @@ export default function Auth() {
                       value={signupEmail}
                       onChange={(e) => setSignupEmail(e.target.value)}
                       required
+                      autoComplete="email"
+                      disabled={isLoading}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-password">Password</Label>
-                    <Input
-                      id="signup-password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={signupPassword}
-                      onChange={(e) => setSignupPassword(e.target.value)}
-                      required
-                    />
+                    <div className="relative">
+                      <Input
+                        id="signup-password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={signupPassword}
+                        onChange={(e) => setSignupPassword(e.target.value)}
+                        required
+                        autoComplete="new-password"
+                        disabled={isLoading}
+                        className="pr-10"
+                        minLength={6}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        tabIndex={-1}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Must be at least 6 characters
+                    </p>
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? (

@@ -1,5 +1,10 @@
+import { useState, useEffect } from "react";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 import {
   TrendingUp,
   Users,
@@ -9,6 +14,8 @@ import {
   ArrowDownRight,
   Building2,
   Settings2,
+  Plus,
+  Loader2,
 } from "lucide-react";
 import {
   AreaChart,
@@ -61,102 +68,28 @@ const managementLabels: Record<string, string> = {
   communication: "Communication",
 };
 
-const stats = [
-  {
-    name: "Total Tasks",
-    value: "2,847",
-    change: "+12.5%",
-    trend: "up",
-    icon: CheckSquare,
-  },
-  {
-    name: "Active Team Members",
-    value: "156",
-    change: "+3.2%",
-    trend: "up",
-    icon: Users,
-  },
-  {
-    name: "Completion Rate",
-    value: "94.2%",
-    change: "+2.1%",
-    trend: "up",
-    icon: TrendingUp,
-  },
-  {
-    name: "Avg. Task Duration",
-    value: "2.4 days",
-    change: "-8.3%",
-    trend: "down",
-    icon: Clock,
-  },
-];
+interface DashboardStats {
+  totalTasks: number;
+  completedTasks: number;
+  inProgressTasks: number;
+  teamMembers: number;
+}
 
-const chartData = [
-  { name: "Jan", tasks: 400, completed: 380 },
-  { name: "Feb", tasks: 520, completed: 490 },
-  { name: "Mar", tasks: 480, completed: 450 },
-  { name: "Apr", tasks: 620, completed: 580 },
-  { name: "May", tasks: 750, completed: 720 },
-  { name: "Jun", tasks: 680, completed: 650 },
-  { name: "Jul", tasks: 820, completed: 790 },
-];
+interface RecentTask {
+  id: string;
+  title: string;
+  status: string;
+  priority: string;
+  created_at: string;
+}
 
-const teamActivity = [
-  { name: "Mon", value: 45 },
-  { name: "Tue", value: 78 },
-  { name: "Wed", value: 65 },
-  { name: "Thu", value: 89 },
-  { name: "Fri", value: 72 },
-  { name: "Sat", value: 34 },
-  { name: "Sun", value: 28 },
-];
-
-const recentTasks = [
-  {
-    id: 1,
-    title: "Review Q3 marketing strategy",
-    status: "in-progress",
-    assignee: "Sarah Chen",
-    priority: "high",
-  },
-  {
-    id: 2,
-    title: "Update customer onboarding flow",
-    status: "completed",
-    assignee: "Mike Johnson",
-    priority: "medium",
-  },
-  {
-    id: 3,
-    title: "Prepare monthly analytics report",
-    status: "todo",
-    assignee: "Emily Davis",
-    priority: "high",
-  },
-  {
-    id: 4,
-    title: "Deploy production hotfix",
-    status: "completed",
-    assignee: "Alex Kim",
-    priority: "urgent",
-  },
-  {
-    id: 5,
-    title: "Conduct team retrospective",
-    status: "in-progress",
-    assignee: "Jordan Lee",
-    priority: "low",
-  },
-];
-
-const statusColors = {
+const statusColors: Record<string, string> = {
   todo: "bg-muted text-muted-foreground",
   "in-progress": "bg-info/10 text-info",
   completed: "bg-success/10 text-success",
 };
 
-const priorityColors = {
+const priorityColors: Record<string, string> = {
   low: "text-muted-foreground",
   medium: "text-warning",
   high: "text-destructive",
@@ -165,8 +98,102 @@ const priorityColors = {
 
 export default function DashboardHome() {
   const { user, configuration, role } = useAuth();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState<DashboardStats>({
+    totalTasks: 0,
+    completedTasks: 0,
+    inProgressTasks: 0,
+    teamMembers: 0,
+  });
+  const [recentTasks, setRecentTasks] = useState<RecentTask[]>([]);
 
   const userName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "User";
+
+  useEffect(() => {
+    if (user) {
+      fetchDashboardData();
+    }
+  }, [user]);
+
+  const fetchDashboardData = async () => {
+    if (!user) return;
+
+    try {
+      // Fetch tasks
+      const { data: tasks } = await supabase
+        .from("tasks")
+        .select("id, title, status, priority, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      // Fetch team members count
+      const { count: teamCount } = await supabase
+        .from("team_members")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id);
+
+      const taskList = tasks || [];
+      
+      setStats({
+        totalTasks: taskList.length,
+        completedTasks: taskList.filter(t => t.status === "completed").length,
+        inProgressTasks: taskList.filter(t => t.status === "in-progress").length,
+        teamMembers: teamCount || 0,
+      });
+
+      setRecentTasks(taskList.slice(0, 5));
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load dashboard data.",
+        variant: "destructive",
+      });
+    }
+    
+    setIsLoading(false);
+  };
+
+  const completionRate = stats.totalTasks > 0 
+    ? Math.round((stats.completedTasks / stats.totalTasks) * 100) 
+    : 0;
+
+  const statsCards = [
+    {
+      name: "Total Tasks",
+      value: stats.totalTasks.toString(),
+      icon: CheckSquare,
+    },
+    {
+      name: "Completed",
+      value: stats.completedTasks.toString(),
+      icon: TrendingUp,
+    },
+    {
+      name: "In Progress",
+      value: stats.inProgressTasks.toString(),
+      icon: Clock,
+    },
+    {
+      name: "Team Members",
+      value: stats.teamMembers.toString(),
+      icon: Users,
+    },
+  ];
+
+  if (isLoading) {
+    return (
+      <div>
+        <DashboardHeader
+          title="Dashboard"
+          subtitle={`Welcome back, ${userName}. Here's what's happening.`}
+        />
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -191,7 +218,6 @@ export default function DashboardHome() {
                 {managementLabels[configuration.management_type] || configuration.management_type}
               </span>
             </div>
-            {/* Additional Management Types */}
             {configuration.additional_management_types && configuration.additional_management_types.length > 0 && (
               configuration.additional_management_types.map(type => (
                 <div 
@@ -214,7 +240,7 @@ export default function DashboardHome() {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((stat) => (
+          {statsCards.map((stat) => (
             <div
               key={stat.name}
               className="bg-card border border-border rounded-xl p-6 card-hover"
@@ -228,218 +254,111 @@ export default function DashboardHome() {
                   <stat.icon className="w-5 h-5 text-primary" />
                 </div>
               </div>
-              <div className="flex items-center gap-1 mt-3">
-                {stat.trend === "up" ? (
-                  <ArrowUpRight className="w-4 h-4 text-success" />
-                ) : (
-                  <ArrowDownRight className="w-4 h-4 text-success" />
-                )}
-                <span className="text-sm font-medium text-success">
-                  {stat.change}
-                </span>
-                <span className="text-sm text-muted-foreground">vs last month</span>
-              </div>
             </div>
           ))}
         </div>
 
-        {/* Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Chart */}
-          <div className="lg:col-span-2 bg-card border border-border rounded-xl p-6">
-            <div className="flex items-center justify-between mb-6">
+        {/* Completion Rate */}
+        {stats.totalTasks > 0 && (
+          <div className="bg-card border border-border rounded-xl p-6">
+            <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="font-semibold">Task Overview</h3>
+                <h3 className="font-semibold">Completion Rate</h3>
                 <p className="text-sm text-muted-foreground">
-                  Monthly task creation vs completion
+                  {stats.completedTasks} of {stats.totalTasks} tasks completed
                 </p>
               </div>
+              <span className="text-2xl font-bold text-primary">{completionRate}%</span>
             </div>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData}>
-                  <defs>
-                    <linearGradient id="colorTasks" x1="0" y1="0" x2="0" y2="1">
-                      <stop
-                        offset="5%"
-                        stopColor="hsl(var(--primary))"
-                        stopOpacity={0.3}
-                      />
-                      <stop
-                        offset="95%"
-                        stopColor="hsl(var(--primary))"
-                        stopOpacity={0}
-                      />
-                    </linearGradient>
-                    <linearGradient id="colorCompleted" x1="0" y1="0" x2="0" y2="1">
-                      <stop
-                        offset="5%"
-                        stopColor="hsl(var(--success))"
-                        stopOpacity={0.3}
-                      />
-                      <stop
-                        offset="95%"
-                        stopColor="hsl(var(--success))"
-                        stopOpacity={0}
-                      />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="hsl(var(--border))"
-                    vertical={false}
-                  />
-                  <XAxis
-                    dataKey="name"
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="tasks"
-                    stroke="hsl(var(--primary))"
-                    fillOpacity={1}
-                    fill="url(#colorTasks)"
-                    strokeWidth={2}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="completed"
-                    stroke="hsl(var(--success))"
-                    fillOpacity={1}
-                    fill="url(#colorCompleted)"
-                    strokeWidth={2}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+            <div className="h-3 bg-muted rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-primary rounded-full transition-all duration-500"
+                style={{ width: `${completionRate}%` }}
+              />
             </div>
           </div>
+        )}
 
-          {/* Team Activity */}
+        {/* Quick Actions & Recent Tasks */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Quick Actions */}
           <div className="bg-card border border-border rounded-xl p-6">
-            <div className="mb-6">
-              <h3 className="font-semibold">Team Activity</h3>
-              <p className="text-sm text-muted-foreground">This week</p>
-            </div>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={teamActivity}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="hsl(var(--border))"
-                    vertical={false}
-                  />
-                  <XAxis
-                    dataKey="name"
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                    }}
-                  />
-                  <Bar
-                    dataKey="value"
-                    fill="hsl(var(--primary))"
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
+            <h3 className="font-semibold mb-4">Quick Actions</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2">
+                <Link to="/dashboard/tasks">
+                  <CheckSquare className="w-5 h-5" />
+                  <span>View Tasks</span>
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2">
+                <Link to="/dashboard/team">
+                  <Users className="w-5 h-5" />
+                  <span>Team Members</span>
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2">
+                <Link to="/dashboard/import">
+                  <Plus className="w-5 h-5" />
+                  <span>Import Data</span>
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2">
+                <Link to="/dashboard/reports">
+                  <TrendingUp className="w-5 h-5" />
+                  <span>Reports</span>
+                </Link>
+              </Button>
             </div>
           </div>
-        </div>
 
-        {/* Recent Tasks */}
-        <div className="bg-card border border-border rounded-xl p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
+          {/* Recent Tasks */}
+          <div className="bg-card border border-border rounded-xl p-6">
+            <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold">Recent Tasks</h3>
-              <p className="text-sm text-muted-foreground">
-                Latest updates from your team
-              </p>
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/dashboard/tasks">View all</Link>
+              </Button>
             </div>
-            <button className="text-sm font-medium text-primary hover:underline">
-              View all
-            </button>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                    Task
-                  </th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                    Status
-                  </th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                    Assignee
-                  </th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                    Priority
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
+            
+            {recentTasks.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <CheckSquare className="w-8 h-8 text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground mb-3">No tasks yet</p>
+                <Button size="sm" asChild>
+                  <Link to="/dashboard/tasks">Create your first task</Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
                 {recentTasks.map((task) => (
-                  <tr
+                  <div
                     key={task.id}
-                    className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
+                    className="flex items-center justify-between py-2 border-b border-border last:border-0"
                   >
-                    <td className="py-4 px-4">
-                      <span className="font-medium">{task.title}</span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${
-                          statusColors[task.status as keyof typeof statusColors]
-                        }`}
-                      >
-                        {task.status.replace("-", " ")}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4 text-muted-foreground">
-                      {task.assignee}
-                    </td>
-                    <td className="py-4 px-4">
-                      <span
-                        className={`text-sm capitalize ${
-                          priorityColors[task.priority as keyof typeof priorityColors]
-                        }`}
-                      >
-                        {task.priority}
-                      </span>
-                    </td>
-                  </tr>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{task.title}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${
+                            statusColors[task.status] || statusColors.todo
+                          }`}
+                        >
+                          {task.status.replace("-", " ")}
+                        </span>
+                        <span
+                          className={`text-xs capitalize ${
+                            priorityColors[task.priority] || priorityColors.medium
+                          }`}
+                        >
+                          {task.priority}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            )}
           </div>
         </div>
       </div>
