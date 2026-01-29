@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, forwardRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -8,8 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Building2, Settings2, Plus, X, ArrowLeft } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Loader2, Building2, Settings2, Plus, X } from "lucide-react";
 
 const industries = [
   { value: "sme", label: "SME / Small Business" },
@@ -50,7 +49,7 @@ const managementTypes = [
   { value: "communication", label: "Communication Management" },
 ];
 
-export default function Onboarding() {
+const Onboarding = forwardRef<HTMLDivElement>((_, ref) => {
   const [searchParams] = useSearchParams();
   const [industry, setIndustry] = useState(searchParams.get("industry") || "");
   const [primaryManagementType, setPrimaryManagementType] = useState(searchParams.get("management") || "");
@@ -138,7 +137,7 @@ export default function Onboarding() {
   );
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div ref={ref} className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-grid-pattern opacity-[0.02]" />
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
       <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl" />
@@ -298,4 +297,8 @@ export default function Onboarding() {
       </Card>
     </div>
   );
-}
+});
+
+Onboarding.displayName = "Onboarding";
+
+export default Onboarding;

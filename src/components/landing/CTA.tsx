@@ -34,7 +34,7 @@ export function CTA() {
               className="bg-white text-primary hover:bg-white/90 shadow-xl"
               asChild
             >
-              <Link to="/dashboard">
+              <Link to="/auth">
                 Start Free Trial
                 <ArrowRight className="w-5 h-5" />
               </Link>
