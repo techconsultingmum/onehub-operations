@@ -34,9 +34,11 @@ const bottomNavigation = [
 interface DashboardSidebarProps {
   collapsed: boolean;
   onToggle: () => void;
+  isMobile?: boolean;
+  onNavigate?: () => void;
 }
 
-export function DashboardSidebar({ collapsed, onToggle }: DashboardSidebarProps) {
+export function DashboardSidebar({ collapsed, onToggle, isMobile, onNavigate }: DashboardSidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, user, role } = useAuth();
@@ -58,16 +60,23 @@ export function DashboardSidebar({ collapsed, onToggle }: DashboardSidebarProps)
     navigate("/");
   };
 
+  const handleNavClick = () => {
+    if (onNavigate) {
+      onNavigate();
+    }
+  };
+
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 h-screen bg-sidebar transition-all duration-300 ease-in-out flex flex-col",
-        collapsed ? "w-16" : "w-64"
+        "h-screen bg-sidebar flex flex-col",
+        isMobile ? "w-full" : "fixed left-0 top-0 z-40 transition-all duration-300 ease-in-out",
+        !isMobile && (collapsed ? "w-16" : "w-64")
       )}
     >
       {/* Logo */}
       <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border">
-        {!collapsed && (
+        {(!collapsed || isMobile) && (
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
               <span className="text-primary-foreground font-bold text-lg">M</span>
@@ -75,23 +84,26 @@ export function DashboardSidebar({ collapsed, onToggle }: DashboardSidebarProps)
             <span className="font-bold text-lg text-white">ManageX</span>
           </div>
         )}
-        <button
-          onClick={onToggle}
-          className={cn(
-            "p-2 rounded-lg hover:bg-sidebar-accent transition-colors text-sidebar-foreground",
-            collapsed && "mx-auto"
-          )}
-        >
-          {collapsed ? (
-            <ChevronRight className="w-4 h-4" />
-          ) : (
-            <ChevronLeft className="w-4 h-4" />
-          )}
-        </button>
+        {!isMobile && (
+          <button
+            onClick={onToggle}
+            className={cn(
+              "p-2 rounded-lg hover:bg-sidebar-accent transition-colors text-sidebar-foreground",
+              collapsed && "mx-auto"
+            )}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? (
+              <ChevronRight className="w-4 h-4" />
+            ) : (
+              <ChevronLeft className="w-4 h-4" />
+            )}
+          </button>
+        )}
       </div>
 
       {/* User Info */}
-      {!collapsed && user && (
+      {(!collapsed || isMobile) && user && (
         <div className="px-4 py-3 border-b border-sidebar-border">
           <p className="text-sm font-medium text-sidebar-foreground truncate">
             {user.email}
@@ -111,6 +123,7 @@ export function DashboardSidebar({ collapsed, onToggle }: DashboardSidebarProps)
             <NavLink
               key={item.name}
               to={item.href}
+              onClick={handleNavClick}
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
                 isActive(item.href)
@@ -119,7 +132,7 @@ export function DashboardSidebar({ collapsed, onToggle }: DashboardSidebarProps)
               )}
             >
               <item.icon className="w-5 h-5 flex-shrink-0" />
-              {!collapsed && <span>{item.name}</span>}
+              {(!collapsed || isMobile) && <span>{item.name}</span>}
             </NavLink>
           ))}
         </div>
@@ -132,6 +145,7 @@ export function DashboardSidebar({ collapsed, onToggle }: DashboardSidebarProps)
             <NavLink
               key={item.name}
               to={item.href}
+              onClick={handleNavClick}
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
                 isActive(item.href)
@@ -140,7 +154,7 @@ export function DashboardSidebar({ collapsed, onToggle }: DashboardSidebarProps)
               )}
             >
               <item.icon className="w-5 h-5 flex-shrink-0" />
-              {!collapsed && <span>{item.name}</span>}
+              {(!collapsed || isMobile) && <span>{item.name}</span>}
             </NavLink>
           ))}
           
@@ -149,11 +163,11 @@ export function DashboardSidebar({ collapsed, onToggle }: DashboardSidebarProps)
             onClick={handleLogout}
             className={cn(
               "w-full justify-start gap-3 px-3 py-2.5 h-auto text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-              collapsed && "justify-center px-0"
+              !isMobile && collapsed && "justify-center px-0"
             )}
           >
             <LogOut className="w-5 h-5 flex-shrink-0" />
-            {!collapsed && <span>Log out</span>}
+            {(!collapsed || isMobile) && <span>Log out</span>}
           </Button>
         </div>
       </div>
