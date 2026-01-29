@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { validateTaskRow, validateTeamMemberRow } from "@/lib/validation";
 import { 
   Upload, 
   Download, 
@@ -18,7 +19,8 @@ import {
   X, 
   Loader2,
   RefreshCw,
-  Table
+  Table,
+  AlertTriangle
 } from "lucide-react";
 
 interface ColumnMapping {
@@ -29,6 +31,11 @@ interface ColumnMapping {
 interface CSVPreviewData {
   headers: string[];
   rows: string[][];
+}
+
+interface ImportError {
+  row: number;
+  errors: string[];
 }
 
 const targetTables = [
@@ -43,7 +50,7 @@ export default function DataImport() {
   const [columnMappings, setColumnMappings] = useState<ColumnMapping[]>([]);
   const [isImporting, setIsImporting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const [importResult, setImportResult] = useState<{ success: number; failed: number } | null>(null);
+  const [importResult, setImportResult] = useState<{ success: number; failed: number; errors: ImportError[] } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const { toast } = useToast();
@@ -60,6 +67,16 @@ export default function DataImport() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile && selectedFile.type === "text/csv") {
+      // Check file size (max 5MB)
+      if (selectedFile.size > 5 * 1024 * 1024) {
+        toast({
+          title: "File Too Large",
+          description: "CSV file must be less than 5MB.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       setFile(selectedFile);
       const reader = new FileReader();
       reader.onload = (event) => {
@@ -116,6 +133,8 @@ export default function DataImport() {
     if (!file || !targetTable || !user) return;
 
     setIsImporting(true);
+    const importErrors: ImportError[] = [];
+    
     try {
       const reader = new FileReader();
       reader.onload = async (event) => {
@@ -123,10 +142,19 @@ export default function DataImport() {
         const lines = text.split("\n").filter(line => line.trim());
         const headers = lines[0].split(",").map(h => h.trim().replace(/^"|"$/g, ""));
         
+        // Limit to 1000 rows per import
+        const maxRows = Math.min(lines.length, 1001);
+        if (lines.length > 1001) {
+          toast({
+            title: "Row Limit",
+            description: "Only the first 1000 rows will be imported.",
+          });
+        }
+        
         let successCount = 0;
         let failCount = 0;
 
-        for (let i = 1; i < lines.length; i++) {
+        for (let i = 1; i < maxRows; i++) {
           const values = lines[i].split(",").map(v => v.trim().replace(/^"|"$/g, ""));
           const rowData: Record<string, string> = {};
           
@@ -140,30 +168,46 @@ export default function DataImport() {
           });
 
           if (Object.keys(rowData).length > 0) {
-            rowData.user_id = user.id;
-            // Insert based on target table type
-            let insertError;
+            // Validate row data based on target table
+            let validationResult;
             if (targetTable === "tasks") {
+              validationResult = validateTaskRow(rowData);
+            } else if (targetTable === "team_members") {
+              validationResult = validateTeamMemberRow(rowData);
+            }
+            
+            if (validationResult && !validationResult.success) {
+              const errors = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`);
+              importErrors.push({ row: i, errors });
+              failCount++;
+              continue;
+            }
+            
+            // Insert validated data
+            let insertError;
+            if (targetTable === "tasks" && validationResult?.success) {
               const { error } = await supabase.from("tasks").insert({
                 user_id: user.id,
-                title: rowData.title || "Untitled",
-                description: rowData.description,
-                status: rowData.status,
-                priority: rowData.priority,
-                due_date: rowData.due_date,
+                title: validationResult.data.title,
+                description: validationResult.data.description,
+                status: validationResult.data.status,
+                priority: validationResult.data.priority,
+                due_date: validationResult.data.due_date,
               });
               insertError = error;
-            } else if (targetTable === "team_members") {
+            } else if (targetTable === "team_members" && validationResult?.success) {
               const { error } = await supabase.from("team_members").insert({
                 user_id: user.id,
-                name: rowData.name || "Unknown",
-                email: rowData.email || "",
-                role: rowData.role || "Member",
-                department: rowData.department,
+                name: validationResult.data.name,
+                email: validationResult.data.email,
+                role: validationResult.data.role,
+                department: validationResult.data.department,
               });
               insertError = error;
             }
+            
             if (insertError) {
+              importErrors.push({ row: i, errors: [insertError.message] });
               failCount++;
             } else {
               successCount++;
@@ -171,9 +215,9 @@ export default function DataImport() {
           }
         }
 
-        setImportResult({ success: successCount, failed: failCount });
+        setImportResult({ success: successCount, failed: failCount, errors: importErrors });
         
-        // Log the import - use type assertion to avoid type issues
+        // Log the import
         const importData = {
           user_id: user.id,
           file_name: file.name,
@@ -183,12 +227,13 @@ export default function DataImport() {
           imported_rows: successCount,
           failed_rows: failCount,
           status: failCount === 0 ? "completed" : "completed_with_errors",
+          error_details: importErrors.length > 0 ? importErrors.slice(0, 10) as unknown as Record<string, unknown> : null,
         };
         await supabase.from("data_imports").insert(importData as never);
 
         toast({
           title: "Import Complete",
-          description: `Successfully imported ${successCount} rows. ${failCount > 0 ? `${failCount} rows failed.` : ""}`,
+          description: `Successfully imported ${successCount} rows. ${failCount > 0 ? `${failCount} rows failed validation.` : ""}`,
           variant: failCount > 0 ? "destructive" : "default",
         });
 
@@ -227,11 +272,17 @@ export default function DataImport() {
         return;
       }
 
-      // Convert to CSV
-      const headers = Object.keys(data[0]).filter(k => k !== "user_id");
+      // Convert to CSV - exclude sensitive columns
+      const excludeColumns = ["user_id", "id"];
+      const headers = Object.keys(data[0]).filter(k => !excludeColumns.includes(k));
       const csvContent = [
         headers.join(","),
-        ...data.map(row => headers.map(h => `"${row[h as keyof typeof row] || ""}"`).join(","))
+        ...data.map(row => headers.map(h => {
+          const value = row[h as keyof typeof row];
+          // Escape quotes and wrap in quotes
+          const stringValue = value?.toString() || "";
+          return `"${stringValue.replace(/"/g, '""')}"`;
+        }).join(","))
       ].join("\n");
 
       // Download
@@ -320,7 +371,7 @@ export default function DataImport() {
               Import Data
             </CardTitle>
             <CardDescription>
-              Upload a CSV file and map columns to import data
+              Upload a CSV file and map columns to import data (max 5MB, 1000 rows)
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -409,6 +460,27 @@ export default function DataImport() {
                   </table>
                 </div>
 
+                {/* Validation Info */}
+                <div className="p-4 bg-muted rounded-lg">
+                  <h4 className="font-medium text-sm mb-2">Validation Rules</h4>
+                  {targetTable === "tasks" && (
+                    <ul className="text-sm text-muted-foreground space-y-1">
+                      <li>• <strong>title</strong>: Required, max 200 characters</li>
+                      <li>• <strong>status</strong>: Must be "todo", "in-progress", or "completed"</li>
+                      <li>• <strong>priority</strong>: Must be "low", "medium", "high", or "urgent"</li>
+                      <li>• <strong>due_date</strong>: Valid date format (e.g., 2025-01-15)</li>
+                    </ul>
+                  )}
+                  {targetTable === "team_members" && (
+                    <ul className="text-sm text-muted-foreground space-y-1">
+                      <li>• <strong>name</strong>: Required, 2-100 characters</li>
+                      <li>• <strong>email</strong>: Required, valid email format</li>
+                      <li>• <strong>role</strong>: Required, max 50 characters</li>
+                      <li>• <strong>department</strong>: Optional, max 100 characters</li>
+                    </ul>
+                  )}
+                </div>
+
                 {/* Preview */}
                 <div className="space-y-2">
                   <Label>Preview (First 5 Rows)</Label>
@@ -442,15 +514,34 @@ export default function DataImport() {
 
             {/* Import Result */}
             {importResult && (
-              <div className="flex items-center gap-4 p-4 rounded-lg bg-muted">
-                <div className="flex items-center gap-2 text-green-600">
-                  <Check className="h-5 w-5" />
-                  <span>{importResult.success} imported</span>
+              <div className="space-y-4">
+                <div className="flex items-center gap-4 p-4 rounded-lg bg-muted">
+                  <div className="flex items-center gap-2 text-green-600">
+                    <Check className="h-5 w-5" />
+                    <span>{importResult.success} imported</span>
+                  </div>
+                  {importResult.failed > 0 && (
+                    <div className="flex items-center gap-2 text-destructive">
+                      <X className="h-5 w-5" />
+                      <span>{importResult.failed} failed</span>
+                    </div>
+                  )}
                 </div>
-                {importResult.failed > 0 && (
-                  <div className="flex items-center gap-2 text-destructive">
-                    <X className="h-5 w-5" />
-                    <span>{importResult.failed} failed</span>
+                
+                {/* Validation Errors */}
+                {importResult.errors.length > 0 && (
+                  <div className="p-4 border border-destructive/30 bg-destructive/10 rounded-lg">
+                    <h4 className="font-medium text-sm mb-2 flex items-center gap-2 text-destructive">
+                      <AlertTriangle className="h-4 w-4" />
+                      Validation Errors (first 10 shown)
+                    </h4>
+                    <ul className="text-sm space-y-1">
+                      {importResult.errors.slice(0, 10).map((error, idx) => (
+                        <li key={idx} className="text-muted-foreground">
+                          Row {error.row}: {error.errors.join(", ")}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 )}
               </div>

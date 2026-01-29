@@ -9,9 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { webhookUrlSchema, webhookNameSchema, generateSecretKey } from "@/lib/validation";
 import { 
   Webhook, 
   Plus, 
@@ -22,7 +24,12 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  Slack as SlackIcon
+  Slack as SlackIcon,
+  Copy,
+  Key,
+  RefreshCw,
+  Eye,
+  EyeOff
 } from "lucide-react";
 
 interface WebhookData {
@@ -34,6 +41,7 @@ interface WebhookData {
   is_active: boolean;
   last_triggered_at: string | null;
   created_at: string;
+  secret_key: string | null;
 }
 
 interface WebhookLog {
@@ -60,12 +68,15 @@ export default function Webhooks() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingWebhook, setEditingWebhook] = useState<WebhookData | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [showSecretKey, setShowSecretKey] = useState(false);
+  const [newlyCreatedSecret, setNewlyCreatedSecret] = useState<string | null>(null);
   
   // Form state
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const [type, setType] = useState("custom");
   const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
+  const [formErrors, setFormErrors] = useState<{ name?: string; url?: string }>({});
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -117,6 +128,8 @@ export default function Webhooks() {
     setType("custom");
     setSelectedEvents([]);
     setEditingWebhook(null);
+    setFormErrors({});
+    setNewlyCreatedSecret(null);
   };
 
   const openCreateDialog = () => {
@@ -130,6 +143,8 @@ export default function Webhooks() {
     setUrl(webhook.url);
     setType(webhook.type);
     setSelectedEvents(webhook.events);
+    setFormErrors({});
+    setNewlyCreatedSecret(null);
     setIsDialogOpen(true);
   };
 
@@ -141,48 +156,64 @@ export default function Webhooks() {
     );
   };
 
+  const validateForm = (): boolean => {
+    const errors: { name?: string; url?: string } = {};
+    
+    const nameResult = webhookNameSchema.safeParse(name);
+    if (!nameResult.success) {
+      errors.name = nameResult.error.errors[0].message;
+    }
+    
+    const urlResult = webhookUrlSchema.safeParse(url);
+    if (!urlResult.success) {
+      errors.url = urlResult.error.errors[0].message;
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSave = async () => {
-    if (!user || !name || !url || selectedEvents.length === 0) {
+    if (!user || selectedEvents.length === 0) {
       toast({
         title: "Missing Fields",
-        description: "Please fill in all required fields and select at least one event.",
+        description: "Please select at least one event.",
         variant: "destructive",
       });
       return;
     }
 
-    // Basic URL validation
-    try {
-      new URL(url);
-    } catch {
-      toast({
-        title: "Invalid URL",
-        description: "Please enter a valid webhook URL.",
-        variant: "destructive",
-      });
+    if (!validateForm()) {
       return;
     }
 
     setIsSaving(true);
 
-    const webhookData = {
-      name,
-      url,
-      type,
-      events: selectedEvents,
-      user_id: user.id,
-    };
+    // Generate secret key for new webhooks
+    const secretKey = editingWebhook ? undefined : generateSecretKey();
 
     let error;
     if (editingWebhook) {
       ({ error } = await supabase
         .from("webhooks")
-        .update(webhookData)
+        .update({
+          name,
+          url,
+          type,
+          events: selectedEvents,
+        })
         .eq("id", editingWebhook.id));
     } else {
       ({ error } = await supabase
         .from("webhooks")
-        .insert(webhookData));
+        .insert({
+          name,
+          url,
+          type,
+          events: selectedEvents,
+          user_id: user.id,
+          secret_key: secretKey,
+        }));
     }
 
     setIsSaving(false);
@@ -194,13 +225,61 @@ export default function Webhooks() {
         variant: "destructive",
       });
     } else {
-      toast({
-        title: editingWebhook ? "Webhook Updated" : "Webhook Created",
-        description: `${name} has been ${editingWebhook ? "updated" : "created"} successfully.`,
-      });
-      setIsDialogOpen(false);
+      if (!editingWebhook && secretKey) {
+        // Show the secret key to the user once
+        setNewlyCreatedSecret(secretKey);
+        toast({
+          title: "Webhook Created",
+          description: "Please save your signing secret - it won't be shown again!",
+        });
+      } else {
+        toast({
+          title: editingWebhook ? "Webhook Updated" : "Webhook Created",
+          description: `${name} has been ${editingWebhook ? "updated" : "created"} successfully.`,
+        });
+        setIsDialogOpen(false);
+      }
       fetchWebhooks();
     }
+  };
+
+  const handleRegenerateSecret = async (webhookId: string) => {
+    const newSecret = generateSecretKey();
+    
+    const { error } = await supabase
+      .from("webhooks")
+      .update({ secret_key: newSecret })
+      .eq("id", webhookId);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to regenerate secret key.",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Secret Key Regenerated",
+        description: "Please update your webhook receiver with the new secret.",
+      });
+      
+      // Copy to clipboard
+      await navigator.clipboard.writeText(newSecret);
+      toast({
+        title: "Copied!",
+        description: "New secret key copied to clipboard.",
+      });
+      
+      fetchWebhooks();
+    }
+  };
+
+  const copySecretToClipboard = async (secret: string) => {
+    await navigator.clipboard.writeText(secret);
+    toast({
+      title: "Copied!",
+      description: "Secret key copied to clipboard.",
+    });
   };
 
   const handleDelete = async (id: string) => {
@@ -280,7 +359,12 @@ export default function Webhooks() {
           <p className="text-muted-foreground">
             Set up webhooks to receive real-time notifications when events occur.
           </p>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) {
+              resetForm();
+            }
+          }}>
             <DialogTrigger asChild>
               <Button onClick={openCreateDialog} className="gap-2">
                 <Plus className="h-4 w-4" />
@@ -296,79 +380,143 @@ export default function Webhooks() {
                   Configure your webhook endpoint and select which events to trigger it.
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Name</Label>
-                  <Input
-                    id="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="My Webhook"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="type">Type</Label>
-                  <Select value={type} onValueChange={setType}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background border-border">
-                      <SelectItem value="custom">Custom Endpoint</SelectItem>
-                      <SelectItem value="slack">Slack</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="url">
-                    {type === "slack" ? "Slack Webhook URL" : "Endpoint URL"}
-                  </Label>
-                  <Input
-                    id="url"
-                    value={url}
-                    onChange={(e) => setUrl(e.target.value)}
-                    placeholder={
-                      type === "slack" 
-                        ? "https://hooks.slack.com/services/..." 
-                        : "https://api.example.com/webhook"
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Events</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {eventTypes.map(event => (
-                      <div key={event.value} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={event.value}
-                          checked={selectedEvents.includes(event.value)}
-                          onCheckedChange={() => handleEventToggle(event.value)}
-                        />
-                        <label
-                          htmlFor={event.value}
-                          className="text-sm font-medium leading-none cursor-pointer"
-                        >
-                          {event.label}
-                        </label>
+              
+              {/* Show secret key after creation */}
+              {newlyCreatedSecret && (
+                <Alert className="border-primary bg-primary/10">
+                  <Key className="h-4 w-4" />
+                  <AlertDescription className="space-y-2">
+                    <p className="font-medium">Save your signing secret!</p>
+                    <p className="text-sm text-muted-foreground">
+                      This secret will only be shown once. Use it to verify webhook signatures.
+                    </p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <code className="flex-1 p-2 bg-background rounded text-xs font-mono overflow-hidden">
+                        {showSecretKey ? newlyCreatedSecret : "••••••••••••••••••••••••••••••••"}
+                      </code>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setShowSecretKey(!showSecretKey)}
+                      >
+                        {showSecretKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => copySecretToClipboard(newlyCreatedSecret)}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <Button
+                      className="w-full mt-2"
+                      onClick={() => {
+                        setNewlyCreatedSecret(null);
+                        setIsDialogOpen(false);
+                        resetForm();
+                      }}
+                    >
+                      I've saved my secret
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              {!newlyCreatedSecret && (
+                <>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Name</Label>
+                      <Input
+                        id="name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="My Webhook"
+                        className={formErrors.name ? "border-destructive" : ""}
+                      />
+                      {formErrors.name && (
+                        <p className="text-sm text-destructive">{formErrors.name}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="type">Type</Label>
+                      <Select value={type} onValueChange={setType}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background border-border">
+                          <SelectItem value="custom">Custom Endpoint</SelectItem>
+                          <SelectItem value="slack">Slack</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="url">
+                        {type === "slack" ? "Slack Webhook URL" : "Endpoint URL"}
+                      </Label>
+                      <Input
+                        id="url"
+                        value={url}
+                        onChange={(e) => setUrl(e.target.value)}
+                        placeholder={
+                          type === "slack" 
+                            ? "https://hooks.slack.com/services/..." 
+                            : "https://api.example.com/webhook"
+                        }
+                        className={formErrors.url ? "border-destructive" : ""}
+                      />
+                      {formErrors.url && (
+                        <p className="text-sm text-destructive">{formErrors.url}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Events</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {eventTypes.map(event => (
+                          <div key={event.value} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={event.value}
+                              checked={selectedEvents.includes(event.value)}
+                              onCheckedChange={() => handleEventToggle(event.value)}
+                            />
+                            <label
+                              htmlFor={event.value}
+                              className="text-sm font-medium leading-none cursor-pointer"
+                            >
+                              {event.label}
+                            </label>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    </div>
+                    
+                    {!editingWebhook && (
+                      <Alert>
+                        <Key className="h-4 w-4" />
+                        <AlertDescription>
+                          A signing secret will be generated automatically. Use it to verify webhook requests.
+                        </AlertDescription>
+                      </Alert>
+                    )}
                   </div>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSave} disabled={isSaving}>
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    editingWebhook ? "Update" : "Create"
-                  )}
-                </Button>
-              </DialogFooter>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleSave} disabled={isSaving}>
+                      {isSaving ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        editingWebhook ? "Update" : "Create"
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </>
+              )}
             </DialogContent>
           </Dialog>
         </div>
@@ -408,6 +556,12 @@ export default function Webhooks() {
                           <Badge variant={webhook.is_active ? "default" : "secondary"}>
                             {webhook.is_active ? "Active" : "Paused"}
                           </Badge>
+                          {webhook.secret_key && (
+                            <Badge variant="outline" className="gap-1">
+                              <Key className="h-3 w-3" />
+                              Signed
+                            </Badge>
+                          )}
                         </div>
                         <p className="text-sm text-muted-foreground mt-1 font-mono">
                           {webhook.url.length > 50 ? webhook.url.slice(0, 50) + "..." : webhook.url}
@@ -432,6 +586,16 @@ export default function Webhooks() {
                         checked={webhook.is_active}
                         onCheckedChange={(checked) => toggleWebhookActive(webhook.id, checked)}
                       />
+                      {webhook.secret_key && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRegenerateSecret(webhook.id)}
+                          title="Regenerate Secret"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
