@@ -5,10 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Plus, Search, MoreHorizontal, Mail, Phone, Loader2, Trash2, Edit, Users } from "lucide-react";
+import { Plus, Search, Mail, Loader2, Trash2, Edit, Users } from "lucide-react";
 import { z } from "zod";
 
 interface TeamMember {
@@ -55,6 +56,11 @@ export default function Team() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; member: TeamMember | null; isDeleting: boolean }>({
+    open: false,
+    member: null,
+    isDeleting: false,
+  });
   
   // Form state
   const [name, setName] = useState("");
@@ -180,8 +186,15 @@ export default function Team() {
     }
   };
 
-  const handleDelete = async (id: string, memberName: string) => {
-    const { error } = await supabase.from("team_members").delete().eq("id", id);
+  const confirmDelete = (member: TeamMember) => {
+    setDeleteConfirm({ open: true, member, isDeleting: false });
+  };
+
+  const handleDelete = async () => {
+    if (!deleteConfirm.member) return;
+    
+    setDeleteConfirm(prev => ({ ...prev, isDeleting: true }));
+    const { error } = await supabase.from("team_members").delete().eq("id", deleteConfirm.member.id);
 
     if (error) {
       toast({
@@ -192,10 +205,11 @@ export default function Team() {
     } else {
       toast({
         title: "Member Removed",
-        description: `${memberName} has been removed from your team.`,
+        description: `${deleteConfirm.member.name} has been removed from your team.`,
       });
-      setMembers(members.filter(m => m.id !== id));
+      setMembers(members.filter(m => m.id !== deleteConfirm.member!.id));
     }
+    setDeleteConfirm({ open: false, member: null, isDeleting: false });
   };
 
   const filteredMembers = members.filter(
@@ -378,7 +392,7 @@ export default function Team() {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={() => handleDelete(member.id, member.name)}
+                      onClick={() => confirmDelete(member)}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -424,6 +438,18 @@ export default function Team() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteConfirm.open}
+        onOpenChange={(open) => setDeleteConfirm({ open, member: null, isDeleting: false })}
+        title="Remove Team Member"
+        description={`Are you sure you want to remove "${deleteConfirm.member?.name}" from your team? This action cannot be undone.`}
+        confirmLabel="Remove"
+        onConfirm={handleDelete}
+        isLoading={deleteConfirm.isDeleting}
+        variant="destructive"
+      />
     </div>
   );
 }
