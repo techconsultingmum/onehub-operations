@@ -7,11 +7,11 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Plus, X, Building2, Settings2 } from "lucide-react";
+import { Loader2, Plus, X, Building2, Settings2, Save } from "lucide-react";
 
 const industries = [
   { value: "sme", label: "SME / Small Business" },
@@ -61,6 +61,10 @@ export default function SettingsPage() {
   );
   const [showAdditional, setShowAdditional] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileFirstName, setProfileFirstName] = useState("");
+  const [profileLastName, setProfileLastName] = useState("");
+  const [deleteAccountConfirm, setDeleteAccountConfirm] = useState(false);
   const [notificationPrefs, setNotificationPrefs] = useState({
     email_notifications: true,
     push_notifications: true,
@@ -72,7 +76,18 @@ export default function SettingsPage() {
       setAdditionalTypes(configuration.additional_management_types);
     }
     fetchNotificationPrefs();
-  }, [configuration]);
+    
+    // Initialize profile name from user metadata
+    const displayName = user?.user_metadata?.full_name || "";
+    const parts = displayName.split(" ");
+    if (parts.length > 1) {
+      setProfileFirstName(parts[0]);
+      setProfileLastName(parts.slice(1).join(" "));
+    } else {
+      setProfileFirstName(displayName);
+      setProfileLastName("");
+    }
+  }, [configuration, user]);
 
   const fetchNotificationPrefs = async () => {
     if (!user) return;
@@ -85,6 +100,40 @@ export default function SettingsPage() {
 
     if (data) {
       setNotificationPrefs(data);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    
+    setIsSavingProfile(true);
+    const fullName = `${profileFirstName.trim()} ${profileLastName.trim()}`.trim();
+    
+    const { error } = await supabase.auth.updateUser({
+      data: { full_name: fullName }
+    });
+
+    // Also update the profiles table
+    if (!error) {
+      await supabase
+        .from("profiles")
+        .update({ full_name: fullName })
+        .eq("user_id", user.id);
+    }
+
+    setIsSavingProfile(false);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update profile.",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been updated successfully.",
+      });
     }
   };
 
@@ -147,17 +196,21 @@ export default function SettingsPage() {
     }
   };
 
-  const displayName = user?.user_metadata?.full_name || "";
-  const [firstName, lastName] = displayName.split(" ").length > 1 
-    ? [displayName.split(" ")[0], displayName.split(" ").slice(1).join(" ")]
-    : [displayName, ""];
-  const initials = displayName.slice(0, 2).toUpperCase() || "U";
+  const initials = `${profileFirstName.slice(0, 1)}${profileLastName.slice(0, 1)}`.toUpperCase() || user?.email?.slice(0, 2).toUpperCase() || "U";
 
   const currentIndustry = industries.find(i => i.value === configuration?.industry);
   const currentPrimaryType = managementTypes.find(t => t.value === configuration?.management_type);
   const availableAdditionalTypes = managementTypes.filter(
     t => t.value !== configuration?.management_type && !additionalTypes.includes(t.value)
   );
+
+  const hasProfileChanges = (() => {
+    const displayName = user?.user_metadata?.full_name || "";
+    const parts = displayName.split(" ");
+    const originalFirst = parts.length > 1 ? parts[0] : displayName;
+    const originalLast = parts.length > 1 ? parts.slice(1).join(" ") : "";
+    return profileFirstName !== originalFirst || profileLastName !== originalLast;
+  })();
 
   return (
     <div>
@@ -169,27 +222,59 @@ export default function SettingsPage() {
       <div className="p-6 max-w-3xl space-y-6">
         {/* Profile Section */}
         <div className="bg-card border border-border rounded-xl p-6">
-          <h3 className="font-semibold mb-4">Profile</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold">Profile</h3>
+            {hasProfileChanges && (
+              <Button 
+                size="sm" 
+                onClick={handleSaveProfile} 
+                disabled={isSavingProfile}
+                className="gap-2"
+              >
+                {isSavingProfile ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
           <div className="space-y-4">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
                 <span className="text-2xl font-bold text-primary">{initials}</span>
               </div>
-              <Button variant="outline">Change Avatar</Button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="firstName">First Name</Label>
-                <Input id="firstName" defaultValue={firstName} />
+                <Input 
+                  id="firstName" 
+                  value={profileFirstName}
+                  onChange={(e) => setProfileFirstName(e.target.value)}
+                  maxLength={50}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lastName">Last Name</Label>
-                <Input id="lastName" defaultValue={lastName} />
+                <Input 
+                  id="lastName" 
+                  value={profileLastName}
+                  onChange={(e) => setProfileLastName(e.target.value)}
+                  maxLength={50}
+                />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input id="email" type="email" value={user?.email || ""} disabled />
+              <p className="text-xs text-muted-foreground">Email cannot be changed here.</p>
             </div>
           </div>
         </div>
@@ -382,10 +467,32 @@ export default function SettingsPage() {
                 Permanently delete your account and all data
               </p>
             </div>
-            <Button variant="destructive">Delete Account</Button>
+            <Button 
+              variant="destructive"
+              onClick={() => setDeleteAccountConfirm(true)}
+            >
+              Delete Account
+            </Button>
           </div>
         </div>
       </div>
+
+      {/* Delete Account Confirmation */}
+      <ConfirmDialog
+        open={deleteAccountConfirm}
+        onOpenChange={setDeleteAccountConfirm}
+        title="Delete Account"
+        description="Are you absolutely sure you want to delete your account? This action is permanent and will delete all your data including tasks, team members, and settings. This cannot be undone."
+        confirmLabel="Delete My Account"
+        onConfirm={() => {
+          toast({
+            title: "Account Deletion",
+            description: "Please contact support to delete your account.",
+          });
+          setDeleteAccountConfirm(false);
+        }}
+        variant="destructive"
+      />
     </div>
   );
 }

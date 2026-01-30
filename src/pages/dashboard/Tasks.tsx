@@ -6,10 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Plus, Filter, Search, MoreHorizontal, Loader2, Trash2, Edit, CheckSquare } from "lucide-react";
+import { Plus, Search, Loader2, Trash2, Edit, CheckSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type TaskStatus = "todo" | "in-progress" | "completed";
@@ -45,6 +46,11 @@ export default function Tasks() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; task: Task | null; isDeleting: boolean }>({
+    open: false,
+    task: null,
+    isDeleting: false,
+  });
   
   // Form state
   const [title, setTitle] = useState("");
@@ -158,8 +164,15 @@ export default function Tasks() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    const { error } = await supabase.from("tasks").delete().eq("id", id);
+  const confirmDelete = (task: Task) => {
+    setDeleteConfirm({ open: true, task, isDeleting: false });
+  };
+
+  const handleDelete = async () => {
+    if (!deleteConfirm.task) return;
+    
+    setDeleteConfirm(prev => ({ ...prev, isDeleting: true }));
+    const { error } = await supabase.from("tasks").delete().eq("id", deleteConfirm.task.id);
 
     if (error) {
       toast({
@@ -172,8 +185,9 @@ export default function Tasks() {
         title: "Task Deleted",
         description: "The task has been deleted.",
       });
-      setTasks(tasks.filter(t => t.id !== id));
+      setTasks(tasks.filter(t => t.id !== deleteConfirm.task!.id));
     }
+    setDeleteConfirm({ open: false, task: null, isDeleting: false });
   };
 
   const updateTaskStatus = async (id: string, newStatus: TaskStatus) => {
@@ -397,7 +411,7 @@ export default function Tasks() {
                               variant="ghost"
                               size="icon"
                               className="h-7 w-7 text-destructive hover:text-destructive"
-                              onClick={() => handleDelete(task.id)}
+                              onClick={() => confirmDelete(task)}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </Button>
@@ -423,6 +437,18 @@ export default function Tasks() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteConfirm.open}
+        onOpenChange={(open) => setDeleteConfirm({ open, task: null, isDeleting: false })}
+        title="Delete Task"
+        description={`Are you sure you want to delete "${deleteConfirm.task?.title}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        onConfirm={handleDelete}
+        isLoading={deleteConfirm.isDeleting}
+        variant="destructive"
+      />
     </div>
   );
 }
