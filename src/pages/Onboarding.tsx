@@ -8,46 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Building2, Settings2, Plus, X } from "lucide-react";
-
-const industries = [
-  { value: "sme", label: "SME / Small Business" },
-  { value: "manufacturing", label: "Manufacturing" },
-  { value: "healthcare", label: "Healthcare" },
-  { value: "education", label: "Education" },
-  { value: "logistics", label: "Logistics & Transportation" },
-  { value: "retail", label: "Retail & E-commerce" },
-  { value: "consulting", label: "Consulting & Professional Services" },
-  { value: "construction", label: "Construction & Real Estate" },
-  { value: "agriculture", label: "Agriculture & Farming" },
-  { value: "travel", label: "Travel & Hospitality" },
-  { value: "food", label: "Food & Beverage" },
-  { value: "media", label: "Media & Entertainment" },
-  { value: "finance", label: "Finance & Banking" },
-  { value: "technology", label: "Technology & IT" },
-  { value: "property", label: "Property Management" },
-];
-
-const managementTypes = [
-  { value: "project", label: "Project Management" },
-  { value: "task", label: "Task Management" },
-  { value: "team", label: "Team Management" },
-  { value: "resource", label: "Resource Management" },
-  { value: "inventory", label: "Inventory Management" },
-  { value: "crm", label: "CRM (Customer Relationship)" },
-  { value: "sales", label: "Sales Management" },
-  { value: "finance", label: "Finance & Accounting" },
-  { value: "operations", label: "Operations Management" },
-  { value: "quality", label: "Quality Management" },
-  { value: "compliance", label: "Compliance & Risk" },
-  { value: "supply-chain", label: "Supply Chain Management" },
-  { value: "vendor", label: "Vendor Management" },
-  { value: "facility", label: "Facility Management" },
-  { value: "time", label: "Time & Attendance" },
-  { value: "performance", label: "Performance Management" },
-  { value: "document", label: "Document Management" },
-  { value: "communication", label: "Communication Management" },
-];
+import { Loader2, Building2, Settings2, Plus, X, AlertCircle } from "lucide-react";
+import { 
+  industries, 
+  getManagementTypesForIndustry,
+  getIndustryLabel,
+  getManagementTypeLabel,
+  type ManagementType 
+} from "@/lib/industry-config";
 
 const Onboarding = forwardRef<HTMLDivElement>((_, ref) => {
   const [searchParams] = useSearchParams();
@@ -56,6 +24,7 @@ const Onboarding = forwardRef<HTMLDivElement>((_, ref) => {
   const [additionalTypes, setAdditionalTypes] = useState<string[]>([]);
   const [showAdditional, setShowAdditional] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [availableManagementTypes, setAvailableManagementTypes] = useState<ManagementType[]>([]);
   
   const { user, configuration, saveConfiguration, loading } = useAuth();
   const navigate = useNavigate();
@@ -74,6 +43,26 @@ const Onboarding = forwardRef<HTMLDivElement>((_, ref) => {
       navigate("/dashboard");
     }
   }, [loading, configuration, navigate]);
+
+  // Update available management types when industry changes
+  useEffect(() => {
+    if (industry) {
+      const types = getManagementTypesForIndustry(industry);
+      setAvailableManagementTypes(types);
+      
+      // Reset primary management type if it's not available for this industry
+      if (primaryManagementType && !types.find(t => t.value === primaryManagementType)) {
+        setPrimaryManagementType("");
+      }
+      
+      // Reset additional types that are no longer valid
+      setAdditionalTypes(prev => prev.filter(t => types.find(mt => mt.value === t)));
+    } else {
+      setAvailableManagementTypes([]);
+      setPrimaryManagementType("");
+      setAdditionalTypes([]);
+    }
+  }, [industry]);
 
   const handleAdditionalTypeToggle = (type: string) => {
     if (type === primaryManagementType) return;
@@ -132,7 +121,7 @@ const Onboarding = forwardRef<HTMLDivElement>((_, ref) => {
     return null;
   }
 
-  const availableAdditionalTypes = managementTypes.filter(
+  const availableAdditionalTypes = availableManagementTypes.filter(
     t => t.value !== primaryManagementType && !additionalTypes.includes(t.value)
   );
 
@@ -150,9 +139,9 @@ const Onboarding = forwardRef<HTMLDivElement>((_, ref) => {
             </div>
             <span className="text-2xl font-bold">ManageX</span>
           </div>
-          <CardTitle className="text-xl">Customize Your Experience</CardTitle>
+          <CardTitle className="text-xl">Select your industry and management needs to get started</CardTitle>
           <CardDescription>
-            Select your industry and management focus to personalize your dashboard
+            Your dashboard will be customized based on your selections
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -174,6 +163,11 @@ const Onboarding = forwardRef<HTMLDivElement>((_, ref) => {
                   ))}
                 </SelectContent>
               </Select>
+              {industry && (
+                <p className="text-xs text-muted-foreground">
+                  {industries.find(i => i.value === industry)?.description}
+                </p>
+              )}
             </div>
             
             <div className="space-y-2">
@@ -181,25 +175,43 @@ const Onboarding = forwardRef<HTMLDivElement>((_, ref) => {
                 <Settings2 className="h-4 w-4 text-primary" />
                 Primary Management Type
               </Label>
-              <Select value={primaryManagementType} onValueChange={(v) => {
-                setPrimaryManagementType(v);
-                setAdditionalTypes(prev => prev.filter(t => t !== v));
-              }}>
-                <SelectTrigger className="bg-background">
-                  <SelectValue placeholder="Select management focus" />
-                </SelectTrigger>
-                <SelectContent className="bg-background border-border z-50 max-h-60">
-                  {managementTypes.map((type) => (
-                    <SelectItem key={type.value} value={type.value}>
-                      {type.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {!industry ? (
+                <div className="flex items-center gap-2 p-3 rounded-lg border border-border bg-muted/50 text-sm text-muted-foreground">
+                  <AlertCircle className="h-4 w-4" />
+                  Select an industry first to see available management types
+                </div>
+              ) : (
+                <>
+                  <Select 
+                    value={primaryManagementType} 
+                    onValueChange={(v) => {
+                      setPrimaryManagementType(v);
+                      setAdditionalTypes(prev => prev.filter(t => t !== v));
+                    }}
+                    disabled={!industry}
+                  >
+                    <SelectTrigger className="bg-background">
+                      <SelectValue placeholder="Select management focus" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border-border z-50 max-h-60">
+                      {availableManagementTypes.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {primaryManagementType && (
+                    <p className="text-xs text-muted-foreground">
+                      {availableManagementTypes.find(t => t.value === primaryManagementType)?.description}
+                    </p>
+                  )}
+                </>
+              )}
             </div>
 
             {/* Additional Management Types */}
-            {primaryManagementType && (
+            {primaryManagementType && availableAdditionalTypes.length > 0 && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Label className="text-sm text-muted-foreground">
@@ -223,7 +235,7 @@ const Onboarding = forwardRef<HTMLDivElement>((_, ref) => {
                 {additionalTypes.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {additionalTypes.map(type => {
-                      const typeInfo = managementTypes.find(t => t.value === type);
+                      const typeInfo = availableManagementTypes.find(t => t.value === type);
                       return (
                         <Badge 
                           key={type} 
@@ -250,7 +262,7 @@ const Onboarding = forwardRef<HTMLDivElement>((_, ref) => {
                 {showAdditional && (
                   <div className="border border-border rounded-lg p-4 bg-muted/30 space-y-3">
                     <div className="flex items-center justify-between">
-                      <Label className="text-sm">Select additional types</Label>
+                      <Label className="text-sm">Select additional types for {getIndustryLabel(industry)}</Label>
                       <Button
                         type="button"
                         variant="ghost"
@@ -271,6 +283,7 @@ const Onboarding = forwardRef<HTMLDivElement>((_, ref) => {
                           <label
                             htmlFor={`add-${type.value}`}
                             className="text-sm font-medium leading-none cursor-pointer truncate"
+                            title={type.description}
                           >
                             {type.label}
                           </label>
@@ -282,7 +295,7 @@ const Onboarding = forwardRef<HTMLDivElement>((_, ref) => {
               </div>
             )}
             
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full" disabled={isLoading || !industry || !primaryManagementType}>
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

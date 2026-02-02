@@ -10,6 +10,18 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
+  Package,
+  DollarSign,
+  Heart,
+  GraduationCap,
+  Truck,
+  Calendar,
+  Utensils,
+  FileText,
+  Target,
+  Building,
+  MessageSquare,
+  LucideIcon,
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -17,7 +29,8 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
-const navigation = [
+// Base navigation items shown for all users
+const baseNavigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Tasks", href: "/dashboard/tasks", icon: CheckSquare },
   { name: "Team", href: "/dashboard/team", icon: Users },
@@ -25,6 +38,22 @@ const navigation = [
   { name: "Data Import", href: "/dashboard/import", icon: FileSpreadsheet },
   { name: "Webhooks", href: "/dashboard/webhooks", icon: Webhook },
 ];
+
+// Additional navigation items for specific management types
+const managementNavItems: Record<string, { name: string; href: string; icon: LucideIcon }> = {
+  inventory: { name: "Inventory", href: "/dashboard/tasks", icon: Package },
+  sales: { name: "Sales", href: "/dashboard/reports", icon: DollarSign },
+  patient: { name: "Patients", href: "/dashboard/tasks", icon: Heart },
+  student: { name: "Students", href: "/dashboard/tasks", icon: GraduationCap },
+  fleet: { name: "Fleet", href: "/dashboard/tasks", icon: Truck },
+  booking: { name: "Bookings", href: "/dashboard/tasks", icon: Calendar },
+  menu: { name: "Menu", href: "/dashboard/tasks", icon: Utensils },
+  document: { name: "Documents", href: "/dashboard/tasks", icon: FileText },
+  campaign: { name: "Campaigns", href: "/dashboard/tasks", icon: Target },
+  facility: { name: "Facilities", href: "/dashboard/tasks", icon: Building },
+  tenant: { name: "Tenants", href: "/dashboard/tasks", icon: Users },
+  communication: { name: "Messages", href: "/dashboard/tasks", icon: MessageSquare },
+};
 
 const bottomNavigation = [
   { name: "Notifications", href: "/dashboard/notifications", icon: Bell },
@@ -41,7 +70,7 @@ interface DashboardSidebarProps {
 export function DashboardSidebar({ collapsed, onToggle, isMobile, onNavigate }: DashboardSidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut, user, role } = useAuth();
+  const { signOut, user, role, configuration } = useAuth();
   const { toast } = useToast();
 
   const isActive = (href: string) => {
@@ -65,6 +94,13 @@ export function DashboardSidebar({ collapsed, onToggle, isMobile, onNavigate }: 
       onNavigate();
     }
   };
+
+  // Build navigation items based on user's configuration
+  const navigation = [...baseNavigation];
+  
+  // Note: Additional management-specific nav items can be added here
+  // when those features are fully implemented
+  // For now, the base navigation covers all core functionality
 
   return (
     <aside
@@ -106,13 +142,20 @@ export function DashboardSidebar({ collapsed, onToggle, isMobile, onNavigate }: 
       {(!collapsed || isMobile) && user && (
         <div className="px-4 py-3 border-b border-sidebar-border">
           <p className="text-sm font-medium text-sidebar-foreground truncate">
-            {user.email}
+            {user.user_metadata?.full_name || user.email}
           </p>
-          {role && (
-            <p className="text-xs text-sidebar-foreground/60 capitalize">
-              {role}
-            </p>
-          )}
+          <div className="flex items-center gap-2 mt-1">
+            {role && (
+              <span className="text-xs text-sidebar-foreground/60 capitalize">
+                {role}
+              </span>
+            )}
+            {configuration && (
+              <span className="text-xs text-sidebar-foreground/40">
+                • {configuration.industry}
+              </span>
+            )}
+          </div>
         </div>
       )}
 

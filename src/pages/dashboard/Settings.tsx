@@ -12,45 +12,13 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Plus, X, Building2, Settings2, Save } from "lucide-react";
-
-const industries = [
-  { value: "sme", label: "SME / Small Business" },
-  { value: "manufacturing", label: "Manufacturing" },
-  { value: "healthcare", label: "Healthcare" },
-  { value: "education", label: "Education" },
-  { value: "logistics", label: "Logistics & Transportation" },
-  { value: "retail", label: "Retail & E-commerce" },
-  { value: "consulting", label: "Consulting & Professional Services" },
-  { value: "construction", label: "Construction & Real Estate" },
-  { value: "agriculture", label: "Agriculture & Farming" },
-  { value: "travel", label: "Travel & Hospitality" },
-  { value: "food", label: "Food & Beverage" },
-  { value: "media", label: "Media & Entertainment" },
-  { value: "finance", label: "Finance & Banking" },
-  { value: "technology", label: "Technology & IT" },
-  { value: "property", label: "Property Management" },
-];
-
-const managementTypes = [
-  { value: "project", label: "Project Management" },
-  { value: "task", label: "Task Management" },
-  { value: "team", label: "Team Management" },
-  { value: "resource", label: "Resource Management" },
-  { value: "inventory", label: "Inventory Management" },
-  { value: "crm", label: "CRM (Customer Relationship)" },
-  { value: "sales", label: "Sales Management" },
-  { value: "finance", label: "Finance & Accounting" },
-  { value: "operations", label: "Operations Management" },
-  { value: "quality", label: "Quality Management" },
-  { value: "compliance", label: "Compliance & Risk" },
-  { value: "supply-chain", label: "Supply Chain Management" },
-  { value: "vendor", label: "Vendor Management" },
-  { value: "facility", label: "Facility Management" },
-  { value: "time", label: "Time & Attendance" },
-  { value: "performance", label: "Performance Management" },
-  { value: "document", label: "Document Management" },
-  { value: "communication", label: "Communication Management" },
-];
+import { 
+  industries, 
+  managementTypes,
+  getManagementTypesForIndustry,
+  getIndustryLabel,
+  getManagementTypeLabel 
+} from "@/lib/industry-config";
 
 export default function SettingsPage() {
   const { user, configuration, updateAdditionalManagementTypes } = useAuth();
