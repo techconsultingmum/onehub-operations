@@ -5,17 +5,34 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getIndustryLabel, getManagementTypeLabel } from "@/lib/industry-config";
+import { getWidgetsForManagementTypes, type DashboardWidget } from "@/lib/dashboard-widgets";
 import {
   TrendingUp,
   Users,
   CheckSquare,
   Clock,
-  ArrowUpRight,
-  ArrowDownRight,
   Building2,
   Settings2,
   Plus,
   Loader2,
+  Package,
+  DollarSign,
+  FileText,
+  Calendar,
+  Target,
+  Heart,
+  GraduationCap,
+  Truck,
+  MessageSquare,
+  Utensils,
+  ShieldCheck,
+  Briefcase,
+  Building,
+  UserCheck,
+  Settings,
+  BarChart3,
 } from "lucide-react";
 import {
   AreaChart,
@@ -27,46 +44,10 @@ import {
   ResponsiveContainer,
   BarChart,
   Bar,
+  PieChart,
+  Pie,
+  Cell,
 } from "recharts";
-
-const industryLabels: Record<string, string> = {
-  sme: "SME / Small Business",
-  manufacturing: "Manufacturing",
-  healthcare: "Healthcare",
-  education: "Education",
-  logistics: "Logistics & Transportation",
-  retail: "Retail & E-commerce",
-  consulting: "Consulting",
-  construction: "Construction",
-  agriculture: "Agriculture",
-  travel: "Travel & Hospitality",
-  food: "Food & Beverage",
-  media: "Media & Entertainment",
-  finance: "Finance & Banking",
-  technology: "Technology & IT",
-  property: "Property Management",
-};
-
-const managementLabels: Record<string, string> = {
-  project: "Project Management",
-  task: "Task Management",
-  team: "Team Management",
-  resource: "Resource Management",
-  inventory: "Inventory Management",
-  crm: "CRM",
-  sales: "Sales Management",
-  finance: "Finance & Accounting",
-  operations: "Operations",
-  quality: "Quality Management",
-  compliance: "Compliance & Risk",
-  "supply-chain": "Supply Chain",
-  vendor: "Vendor Management",
-  facility: "Facility Management",
-  time: "Time & Attendance",
-  performance: "Performance",
-  document: "Document Management",
-  communication: "Communication",
-};
 
 interface DashboardStats {
   totalTasks: number;
@@ -96,6 +77,43 @@ const priorityColors: Record<string, string> = {
   urgent: "text-destructive font-semibold",
 };
 
+// Sample data for charts
+const sampleChartData = [
+  { name: "Mon", value: 12 },
+  { name: "Tue", value: 19 },
+  { name: "Wed", value: 15 },
+  { name: "Thu", value: 22 },
+  { name: "Fri", value: 18 },
+  { name: "Sat", value: 8 },
+  { name: "Sun", value: 5 },
+];
+
+const pieColors = ["hsl(var(--primary))", "hsl(var(--secondary))", "hsl(var(--accent))", "hsl(var(--muted))"];
+
+// Icon mapping
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  CheckSquare,
+  Users,
+  TrendingUp,
+  Clock,
+  Package,
+  DollarSign,
+  BarChart3,
+  FileText,
+  Truck,
+  Calendar,
+  UserCheck,
+  GraduationCap,
+  Utensils,
+  Building,
+  Heart,
+  MessageSquare,
+  Target,
+  ShieldCheck,
+  Briefcase,
+  Settings,
+};
+
 export default function DashboardHome() {
   const { user, configuration, role } = useAuth();
   const { toast } = useToast();
@@ -107,8 +125,21 @@ export default function DashboardHome() {
     teamMembers: 0,
   });
   const [recentTasks, setRecentTasks] = useState<RecentTask[]>([]);
+  const [widgets, setWidgets] = useState<DashboardWidget[]>([]);
 
   const userName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "User";
+
+  // Get dynamic widgets based on configuration
+  useEffect(() => {
+    if (configuration) {
+      const allTypes = [
+        configuration.management_type,
+        ...(configuration.additional_management_types || []),
+      ];
+      const dynamicWidgets = getWidgetsForManagementTypes(allTypes);
+      setWidgets(dynamicWidgets);
+    }
+  }, [configuration]);
 
   useEffect(() => {
     if (user) {
@@ -158,28 +189,113 @@ export default function DashboardHome() {
     ? Math.round((stats.completedTasks / stats.totalTasks) * 100) 
     : 0;
 
-  const statsCards = [
-    {
-      name: "Total Tasks",
-      value: stats.totalTasks.toString(),
-      icon: CheckSquare,
-    },
-    {
-      name: "Completed",
-      value: stats.completedTasks.toString(),
-      icon: TrendingUp,
-    },
-    {
-      name: "In Progress",
-      value: stats.inProgressTasks.toString(),
-      icon: Clock,
-    },
-    {
-      name: "Team Members",
-      value: stats.teamMembers.toString(),
-      icon: Users,
-    },
-  ];
+  // Render a widget based on its type
+  const renderWidget = (widget: DashboardWidget) => {
+    const Icon = widget.icon;
+    
+    switch (widget.type) {
+      case "stats":
+        return (
+          <Card key={widget.id} className="card-hover">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  {widget.title}
+                </CardTitle>
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Icon className="w-4 h-4 text-primary" />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {widget.id === "tasks_overview" && stats.totalTasks}
+                {widget.id === "team_overview" && stats.teamMembers}
+                {widget.id === "time_tracking" && `${Math.floor(Math.random() * 40 + 120)}h`}
+                {!["tasks_overview", "team_overview", "time_tracking"].includes(widget.id) && "—"}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">{widget.description}</p>
+            </CardContent>
+          </Card>
+        );
+
+      case "chart":
+        return (
+          <Card key={widget.id} className="col-span-1 md:col-span-2 card-hover">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium">{widget.title}</CardTitle>
+                <Icon className="w-4 h-4 text-muted-foreground" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="h-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={sampleChartData}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                    <XAxis dataKey="name" tick={{ fontSize: 12 }} className="text-muted-foreground" />
+                    <YAxis tick={{ fontSize: 12 }} className="text-muted-foreground" />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: "hsl(var(--card))", 
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px"
+                      }} 
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="value" 
+                      stroke="hsl(var(--primary))" 
+                      fill="hsl(var(--primary)/0.2)" 
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">{widget.description}</p>
+            </CardContent>
+          </Card>
+        );
+
+      case "list":
+        return (
+          <Card key={widget.id} className="card-hover">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium">{widget.title}</CardTitle>
+                <Icon className="w-4 h-4 text-muted-foreground" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {widget.id === "recent_documents" ? (
+                  <>
+                    <div className="flex items-center gap-2 text-sm py-1 border-b border-border">
+                      <FileText className="w-3 h-3 text-muted-foreground" />
+                      <span className="truncate">Project Report Q1.pdf</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm py-1 border-b border-border">
+                      <FileText className="w-3 h-3 text-muted-foreground" />
+                      <span className="truncate">Team Guidelines.docx</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm py-1">
+                      <FileText className="w-3 h-3 text-muted-foreground" />
+                      <span className="truncate">Meeting Notes.md</span>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground py-4 text-center">
+                    No items yet
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        );
+
+      default:
+        return null;
+    }
+  };
 
   if (isLoading) {
     return (
@@ -209,13 +325,13 @@ export default function DashboardHome() {
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-sm">
               <Building2 className="w-4 h-4 text-primary" />
               <span className="text-foreground font-medium">
-                {industryLabels[configuration.industry] || configuration.industry}
+                {getIndustryLabel(configuration.industry)}
               </span>
             </div>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent border border-border text-sm">
               <Settings2 className="w-4 h-4 text-muted-foreground" />
               <span className="text-foreground font-medium">
-                {managementLabels[configuration.management_type] || configuration.management_type}
+                {getManagementTypeLabel(configuration.management_type)}
               </span>
             </div>
             {configuration.additional_management_types && configuration.additional_management_types.length > 0 && (
@@ -225,7 +341,7 @@ export default function DashboardHome() {
                   className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted border border-border text-sm"
                 >
                   <span className="text-muted-foreground font-medium">
-                    {managementLabels[type] || type}
+                    {getManagementTypeLabel(type)}
                   </span>
                 </div>
               ))
@@ -238,25 +354,12 @@ export default function DashboardHome() {
           </div>
         )}
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-          {statsCards.map((stat) => (
-            <div
-              key={stat.name}
-              className="bg-card border border-border rounded-xl p-6 card-hover"
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">{stat.name}</p>
-                  <p className="text-2xl font-bold mt-1">{stat.value}</p>
-                </div>
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <stat.icon className="w-5 h-5 text-primary" />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        {/* Dynamic Widgets Grid */}
+        {widgets.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {widgets.slice(0, 8).map(widget => renderWidget(widget))}
+          </div>
+        )}
 
         {/* Completion Rate */}
         {stats.totalTasks > 0 && (
