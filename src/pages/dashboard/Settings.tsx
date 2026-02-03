@@ -168,7 +168,13 @@ export default function SettingsPage() {
 
   const currentIndustry = industries.find(i => i.value === configuration?.industry);
   const currentPrimaryType = managementTypes.find(t => t.value === configuration?.management_type);
-  const availableAdditionalTypes = managementTypes.filter(
+  
+  // Filter management types to only those valid for the user's industry
+  const industryManagementTypes = configuration?.industry 
+    ? getManagementTypesForIndustry(configuration.industry)
+    : managementTypes;
+    
+  const availableAdditionalTypes = industryManagementTypes.filter(
     t => t.value !== configuration?.management_type && !additionalTypes.includes(t.value)
   );
 

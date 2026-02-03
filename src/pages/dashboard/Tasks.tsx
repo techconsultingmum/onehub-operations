@@ -387,7 +387,9 @@ export default function Tasks() {
                     getTasksByStatus(column.id).map((task) => (
                       <div
                         key={task.id}
-                        className="bg-card border border-border rounded-xl p-4 card-hover"
+                        className="bg-card border border-border rounded-xl p-4 card-hover focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2"
+                        role="article"
+                        aria-label={`Task: ${task.title}, ${task.priority} priority, ${task.status.replace('-', ' ')}`}
                       >
                         <div className="flex items-start justify-between mb-2">
                           <span
