@@ -360,7 +360,9 @@ export default function Team() {
             {filteredMembers.map((member) => (
               <div
                 key={member.id}
-                className="bg-card border border-border rounded-xl p-6 card-hover"
+                className="bg-card border border-border rounded-xl p-6 card-hover focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2"
+                role="article"
+                aria-label={`Team member: ${member.name}, ${member.role}`}
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
