@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { getIndustryLabel } from "@/lib/industry-config";
 
 // Base navigation items shown for all users
 const baseNavigation = [
@@ -152,7 +153,7 @@ export function DashboardSidebar({ collapsed, onToggle, isMobile, onNavigate }: 
             )}
             {configuration && (
               <span className="text-xs text-sidebar-foreground/40">
-                • {configuration.industry}
+                • {getIndustryLabel(configuration.industry)}
               </span>
             )}
           </div>

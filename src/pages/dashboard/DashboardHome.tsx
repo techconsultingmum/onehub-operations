@@ -33,6 +33,8 @@ import {
   UserCheck,
   Settings,
   BarChart3,
+  RefreshCw,
+  AlertCircle,
 } from "lucide-react";
 import {
   AreaChart,
@@ -118,6 +120,7 @@ export default function DashboardHome() {
   const { user, configuration, role } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
   const [stats, setStats] = useState<DashboardStats>({
     totalTasks: 0,
     completedTasks: 0,
@@ -150,6 +153,9 @@ export default function DashboardHome() {
   const fetchDashboardData = async () => {
     if (!user) return;
 
+    setIsLoading(true);
+    setHasError(false);
+
     try {
       // Fetch tasks
       const { data: tasks } = await supabase
@@ -174,10 +180,12 @@ export default function DashboardHome() {
       });
 
       setRecentTasks(taskList.slice(0, 5));
+      setHasError(false);
     } catch (error) {
+      setHasError(true);
       toast({
         title: "Error",
-        description: "Failed to load dashboard data.",
+        description: "Failed to load dashboard data. Please try again.",
         variant: "destructive",
       });
     }
@@ -306,6 +314,32 @@ export default function DashboardHome() {
         />
         <div className="flex items-center justify-center h-64">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+
+  if (hasError) {
+    return (
+      <div>
+        <DashboardHeader
+          title="Dashboard"
+          subtitle={`Welcome back, ${userName}. Here's what's happening.`}
+        />
+        <div className="flex flex-col items-center justify-center h-64 gap-4">
+          <div className="p-4 rounded-full bg-destructive/10">
+            <AlertCircle className="h-8 w-8 text-destructive" />
+          </div>
+          <div className="text-center">
+            <h3 className="font-semibold mb-1">Unable to load dashboard</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              There was a problem loading your data
+            </p>
+            <Button onClick={fetchDashboardData} variant="outline" className="gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Try Again
+            </Button>
+          </div>
         </div>
       </div>
     );
