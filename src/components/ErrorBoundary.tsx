@@ -23,7 +23,19 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("Uncaught error:", error, errorInfo);
+    // Only log full error details in development mode
+    if (import.meta.env.DEV) {
+      console.error("Uncaught error:", error, errorInfo);
+    } else {
+      // In production, log minimal information to avoid exposing internal details
+      console.error("An unexpected error occurred. Error ID:", this.generateErrorId());
+      // In a production app, you would send to an error tracking service like Sentry
+      // reportErrorToService(error, errorInfo);
+    }
+  }
+
+  private generateErrorId(): string {
+    return `err_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 7)}`;
   }
 
   private handleReset = () => {

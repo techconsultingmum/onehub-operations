@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { validateTaskRow, validateTeamMemberRow } from "@/lib/validation";
+import { validateTaskRow, validateTeamMemberRow, parseCSVSafely, parseCSVForImport, sanitizeCSVCell } from "@/lib/validation";
 import { 
   Upload, 
   Download, 
@@ -55,13 +55,18 @@ export default function DataImport() {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const parseCSV = (text: string): CSVPreviewData => {
-    const lines = text.split("\n").filter(line => line.trim());
-    const headers = lines[0].split(",").map(h => h.trim().replace(/^"|"$/g, ""));
-    const rows = lines.slice(1, 6).map(line => 
-      line.split(",").map(cell => cell.trim().replace(/^"|"$/g, ""))
-    );
-    return { headers, rows };
+  // Use secure CSV parsing with formula injection protection
+  const parseCSV = (text: string): CSVPreviewData | null => {
+    const result = parseCSVSafely(text);
+    if (result.error) {
+      toast({
+        title: "CSV Parsing Error",
+        description: result.error,
+        variant: "destructive",
+      });
+      return null;
+    }
+    return { headers: result.headers, rows: result.rows };
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -82,6 +87,10 @@ export default function DataImport() {
       reader.onload = (event) => {
         const text = event.target?.result as string;
         const parsed = parseCSV(text);
+        if (!parsed) {
+          setFile(null);
+          return;
+        }
         setCsvData(parsed);
         // Auto-map columns if names match
         if (targetTable) {
@@ -139,12 +148,24 @@ export default function DataImport() {
       const reader = new FileReader();
       reader.onload = async (event) => {
         const text = event.target?.result as string;
-        const lines = text.split("\n").filter(line => line.trim());
-        const headers = lines[0].split(",").map(h => h.trim().replace(/^"|"$/g, ""));
+        
+        // Use secure parsing with formula injection protection
+        const parseResult = parseCSVForImport(text);
+        if (parseResult.error) {
+          toast({
+            title: "CSV Parsing Error",
+            description: parseResult.error,
+            variant: "destructive",
+          });
+          setIsImporting(false);
+          return;
+        }
+        
+        const { headers, rows, totalRows } = parseResult;
         
         // Limit to 1000 rows per import
-        const maxRows = Math.min(lines.length, 1001);
-        if (lines.length > 1001) {
+        const maxRows = Math.min(totalRows, 1000);
+        if (totalRows > 1000) {
           toast({
             title: "Row Limit",
             description: "Only the first 1000 rows will be imported.",
@@ -154,14 +175,15 @@ export default function DataImport() {
         let successCount = 0;
         let failCount = 0;
 
-        for (let i = 1; i < maxRows; i++) {
-          const values = lines[i].split(",").map(v => v.trim().replace(/^"|"$/g, ""));
+        for (let i = 0; i < maxRows; i++) {
+          const values = rows[i];
           const rowData: Record<string, string> = {};
           
           columnMappings.forEach(mapping => {
             if (mapping.targetColumn) {
               const csvIndex = headers.indexOf(mapping.csvColumn);
-              if (csvIndex !== -1) {
+              if (csvIndex !== -1 && values[csvIndex] !== undefined) {
+                // Values are already sanitized by parseCSVForImport
                 rowData[mapping.targetColumn] = values[csvIndex];
               }
             }
@@ -223,7 +245,7 @@ export default function DataImport() {
           file_name: file.name,
           target_table: targetTable,
           column_mapping: columnMappings as unknown as Record<string, unknown>,
-          total_rows: lines.length - 1,
+          total_rows: totalRows,
           imported_rows: successCount,
           failed_rows: failCount,
           status: failCount === 0 ? "completed" : "completed_with_errors",
