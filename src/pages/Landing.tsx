@@ -1,13 +1,12 @@
-import { forwardRef } from "react";
 import { Navbar } from "@/components/landing/Navbar";
 import { Hero } from "@/components/landing/Hero";
 import { Features } from "@/components/landing/Features";
 import { CTA } from "@/components/landing/CTA";
 import { Footer } from "@/components/landing/Footer";
 
-const Landing = forwardRef<HTMLDivElement>((_, ref) => {
+export default function Landing() {
   return (
-    <div ref={ref} className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       <Navbar />
       <Hero />
       <Features />
@@ -15,8 +14,4 @@ const Landing = forwardRef<HTMLDivElement>((_, ref) => {
       <Footer />
     </div>
   );
-});
-
-Landing.displayName = "Landing";
-
-export default Landing;
+}

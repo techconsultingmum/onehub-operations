@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, Outlet } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -29,6 +29,61 @@ const queryClient = new QueryClient({
   },
 });
 
+// Create browser router with future flags to eliminate deprecation warnings
+const router = createBrowserRouter(
+  [
+    {
+      path: "/",
+      element: <Landing />,
+    },
+    {
+      path: "/auth",
+      element: <Auth />,
+    },
+    {
+      path: "/onboarding",
+      element: (
+        <ProtectedRoute>
+          <Onboarding />
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: "/dashboard",
+      element: (
+        <ProtectedRoute>
+          <ErrorBoundary>
+            <DashboardLayout />
+          </ErrorBoundary>
+        </ProtectedRoute>
+      ),
+      children: [
+        { index: true, element: <DashboardHome /> },
+        { path: "tasks", element: <Tasks /> },
+        { path: "team", element: <Team /> },
+        { path: "reports", element: <Reports /> },
+        { path: "settings", element: <SettingsPage /> },
+        { path: "import", element: <DataImport /> },
+        { path: "webhooks", element: <Webhooks /> },
+        { path: "notifications", element: <Notifications /> },
+      ],
+    },
+    {
+      path: "*",
+      element: <NotFound />,
+    },
+  ],
+  {
+    future: {
+      v7_relativeSplatPath: true,
+      v7_fetcherPersist: true,
+      v7_normalizeFormMethod: true,
+      v7_partialHydration: true,
+      v7_skipActionErrorRevalidation: true,
+    },
+  }
+);
+
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
@@ -36,34 +91,7 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/onboarding" element={
-                <ProtectedRoute>
-                  <Onboarding />
-                </ProtectedRoute>
-              } />
-              <Route path="/dashboard" element={
-                <ProtectedRoute>
-                  <ErrorBoundary>
-                    <DashboardLayout />
-                  </ErrorBoundary>
-                </ProtectedRoute>
-              }>
-                <Route index element={<DashboardHome />} />
-                <Route path="tasks" element={<Tasks />} />
-                <Route path="team" element={<Team />} />
-                <Route path="reports" element={<Reports />} />
-                <Route path="settings" element={<SettingsPage />} />
-                <Route path="import" element={<DataImport />} />
-                <Route path="webhooks" element={<Webhooks />} />
-                <Route path="notifications" element={<Notifications />} />
-              </Route>
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
+          <RouterProvider router={router} future={{ v7_startTransition: true }} />
         </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>

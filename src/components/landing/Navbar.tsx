@@ -1,15 +1,15 @@
-import { forwardRef, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { Link } from "react-router-dom";
 
-export const Navbar = forwardRef<HTMLElement>((_, ref) => {
+export const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
 
   const closeMenu = () => setIsOpen(false);
 
   return (
-    <nav ref={ref} className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50">
       <div className="container px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
@@ -92,6 +92,4 @@ export const Navbar = forwardRef<HTMLElement>((_, ref) => {
       </div>
     </nav>
   );
-});
-
-Navbar.displayName = "Navbar";
+};

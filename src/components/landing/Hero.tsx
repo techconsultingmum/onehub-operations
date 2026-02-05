@@ -1,7 +1,14 @@
-import { forwardRef, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Play, Sparkles, ChevronDown, Building2, Factory, GraduationCap, HeartPulse, Truck, ShoppingBag, Briefcase, Hammer, Leaf, Plane, Utensils, Film, Landmark, Cpu, Home } from "lucide-react";
 import { Link } from "react-router-dom";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -51,14 +58,15 @@ const managementTypes = [
   { value: "communication", label: "Communication & Collaboration" },
 ];
 
-export const Hero = forwardRef<HTMLElement>((_, ref) => {
+export const Hero = () => {
   const [selectedIndustry, setSelectedIndustry] = useState<string>("");
   const [selectedManagement, setSelectedManagement] = useState<string>("");
+  const [showDemoModal, setShowDemoModal] = useState(false);
 
   const canStart = selectedIndustry && selectedManagement;
 
   return (
-    <section ref={ref} className="relative min-h-screen flex items-center justify-center overflow-hidden">
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background Effects */}
       <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-accent/30" />
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse" />
@@ -195,7 +203,7 @@ export const Hero = forwardRef<HTMLElement>((_, ref) => {
 
           {/* Secondary CTA */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 animate-fade-in" style={{ animationDelay: "0.3s" }}>
-            <Button variant="hero-outline" size="lg">
+            <Button variant="hero-outline" size="lg" onClick={() => setShowDemoModal(true)}>
               <Play className="w-5 h-5" />
               Watch Demo
             </Button>
@@ -258,8 +266,39 @@ export const Hero = forwardRef<HTMLElement>((_, ref) => {
           </div>
         </div>
       </div>
+
+      {/* Demo Modal */}
+      <Dialog open={showDemoModal} onOpenChange={setShowDemoModal}>
+        <DialogContent className="sm:max-w-[800px] p-0 overflow-hidden">
+          <DialogHeader className="p-6 pb-0">
+            <DialogTitle>See ManageX in Action</DialogTitle>
+            <DialogDescription>
+              Watch how ManageX helps teams streamline their operations
+            </DialogDescription>
+          </DialogHeader>
+          <div className="aspect-video bg-gradient-to-br from-muted/50 to-muted flex items-center justify-center m-6 mt-4 rounded-lg">
+            <div className="text-center p-8">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mb-4">
+                <Play className="w-10 h-10 text-primary" />
+              </div>
+              <p className="text-muted-foreground text-lg mb-2">Demo Video</p>
+              <p className="text-sm text-muted-foreground/60">
+                Full product walkthrough coming soon
+              </p>
+              <Button 
+                className="mt-6" 
+                onClick={() => {
+                  setShowDemoModal(false);
+                  window.location.href = "/auth";
+                }}
+              >
+                Try It Now
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </section>
   );
-});
-
-Hero.displayName = "Hero";
+};
