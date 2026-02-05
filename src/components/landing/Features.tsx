@@ -1,4 +1,3 @@
-import { forwardRef } from "react";
 import {
   Users, 
   LayoutDashboard, 
@@ -69,9 +68,9 @@ const features = [
   },
 ];
 
-export const Features = forwardRef<HTMLElement>((_, ref) => {
+export const Features = () => {
   return (
-    <section ref={ref} className="py-24 bg-gradient-to-b from-background to-muted/30">
+    <section className="py-24 bg-gradient-to-b from-background to-muted/30">
       <div className="container px-4">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
@@ -117,6 +116,4 @@ export const Features = forwardRef<HTMLElement>((_, ref) => {
       </div>
     </section>
   );
-});
-
-Features.displayName = "Features";
+};

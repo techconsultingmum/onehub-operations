@@ -1,4 +1,3 @@
-import { forwardRef } from "react";
 import { Link } from "react-router-dom";
 
 const footerLinks = {
@@ -27,9 +26,9 @@ const footerLinks = {
   ],
 };
 
-export const Footer = forwardRef<HTMLElement>((_, ref) => {
+export const Footer = () => {
   return (
-    <footer ref={ref} className="bg-sidebar text-sidebar-foreground py-16">
+    <footer className="bg-sidebar text-sidebar-foreground py-16">
       <div className="container px-4">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-12">
           {/* Brand */}
@@ -91,6 +90,4 @@ export const Footer = forwardRef<HTMLElement>((_, ref) => {
       </div>
     </footer>
   );
-});
-
-Footer.displayName = "Footer";
+};
