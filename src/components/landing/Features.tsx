@@ -68,16 +68,16 @@ const features = [
   },
 ];
 
-export const Features = () => {
+export function Features() {
   return (
-    <section className="py-24 bg-gradient-to-b from-background to-muted/30">
+    <section id="features" className="py-24 bg-gradient-to-b from-background to-muted/30" aria-labelledby="features-heading">
       <div className="container px-4">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent text-sm font-medium text-primary mb-4">
             Features
           </div>
-          <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">
+          <h2 id="features-heading" className="text-3xl md:text-5xl font-bold tracking-tight mb-4">
             Everything you need to{" "}
             <span className="text-gradient">manage operations</span>
           </h2>
@@ -88,15 +88,16 @@ export const Features = () => {
         </div>
 
         {/* Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto" role="list">
           {features.map((feature, index) => (
-            <div
+            <article
               key={feature.title}
               className="group relative p-6 bg-card rounded-2xl border border-border hover:border-primary/30 transition-all duration-300 card-hover"
               style={{ animationDelay: `${index * 0.05}s` }}
+              role="listitem"
             >
               {/* Icon */}
-              <div className={`inline-flex items-center justify-center w-12 h-12 rounded-xl ${feature.bgColor} mb-4 group-hover:scale-110 transition-transform duration-300`}>
+              <div className={`inline-flex items-center justify-center w-12 h-12 rounded-xl ${feature.bgColor} mb-4 group-hover:scale-110 transition-transform duration-300`} aria-hidden="true">
                 <feature.icon className={`w-6 h-6 ${feature.color}`} />
               </div>
 
@@ -109,11 +110,11 @@ export const Features = () => {
               </p>
 
               {/* Hover Glow */}
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-            </div>
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" aria-hidden="true" />
+            </article>
           ))}
         </div>
       </div>
     </section>
   );
-};
+}

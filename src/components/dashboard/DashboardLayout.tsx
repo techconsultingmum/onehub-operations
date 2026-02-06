@@ -1,12 +1,13 @@
-import { useState, forwardRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { cn } from "@/lib/utils";
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
-export const DashboardLayout = forwardRef<HTMLDivElement>((_, ref) => {
+export function DashboardLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -25,7 +26,15 @@ export const DashboardLayout = forwardRef<HTMLDivElement>((_, ref) => {
   }, []);
 
   return (
-    <div ref={ref} className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
+      {/* Skip to main content link for accessibility */}
+      <a 
+        href="#main-content" 
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md"
+      >
+        Skip to main content
+      </a>
+
       {/* Mobile Header */}
       {isMobile && (
         <header className="fixed top-0 left-0 right-0 h-14 bg-sidebar border-b border-sidebar-border z-50 flex items-center px-4">
@@ -37,6 +46,10 @@ export const DashboardLayout = forwardRef<HTMLDivElement>((_, ref) => {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="p-0 w-64 bg-sidebar border-sidebar-border">
+              <VisuallyHidden>
+                <SheetTitle>Navigation Menu</SheetTitle>
+                <SheetDescription>Main navigation menu for the dashboard</SheetDescription>
+              </VisuallyHidden>
               <DashboardSidebar
                 collapsed={false}
                 onToggle={() => setMobileOpen(false)}
@@ -63,6 +76,7 @@ export const DashboardLayout = forwardRef<HTMLDivElement>((_, ref) => {
       )}
       
       <main
+        id="main-content"
         className={cn(
           "transition-all duration-300 ease-in-out min-h-screen",
           isMobile ? "ml-0 pt-14" : (collapsed ? "ml-16" : "ml-64")
@@ -72,6 +86,4 @@ export const DashboardLayout = forwardRef<HTMLDivElement>((_, ref) => {
       </main>
     </div>
   );
-});
-
-DashboardLayout.displayName = "DashboardLayout";
+}

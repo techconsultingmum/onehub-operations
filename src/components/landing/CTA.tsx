@@ -2,22 +2,22 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 
-export const CTA = () => {
+export function CTA() {
   return (
-    <section className="py-24 relative overflow-hidden">
+    <section className="py-24 relative overflow-hidden" aria-labelledby="cta-heading">
       {/* Background */}
-      <div className="absolute inset-0 animated-gradient opacity-90" />
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.1)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.1)_1px,transparent_1px)] bg-[size:4rem_4rem]" />
+      <div className="absolute inset-0 animated-gradient opacity-90" aria-hidden="true" />
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.1)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.1)_1px,transparent_1px)] bg-[size:4rem_4rem]" aria-hidden="true" />
 
       <div className="container relative z-10 px-4">
         <div className="max-w-4xl mx-auto text-center">
           {/* Icon */}
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-sm mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-sm mb-8" aria-hidden="true">
             <Zap className="w-8 h-8 text-white" />
           </div>
 
           {/* Heading */}
-          <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">
+          <h2 id="cta-heading" className="text-3xl md:text-5xl font-bold text-white mb-6">
             Ready to streamline your operations?
           </h2>
 
@@ -56,4 +56,4 @@ export const CTA = () => {
       </div>
     </section>
   );
-};
+}
