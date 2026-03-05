@@ -195,8 +195,9 @@ export default function Webhooks() {
 
     setIsSaving(true);
 
-    // Generate secret key for new webhooks
-    const secretKey = editingWebhook ? undefined : generateSecretKey();
+    // Generate secret key for new webhooks, store only the hash
+    const rawSecret = editingWebhook ? undefined : generateSecretKey();
+    const secretKeyHash = rawSecret ? await hashSecretKey(rawSecret) : undefined;
 
     let error;
     if (editingWebhook) {
@@ -218,7 +219,7 @@ export default function Webhooks() {
           type,
           events: selectedEvents,
           user_id: user.id,
-          secret_key: secretKey,
+          secret_key: secretKeyHash,
         }));
     }
 
@@ -231,9 +232,9 @@ export default function Webhooks() {
         variant: "destructive",
       });
     } else {
-      if (!editingWebhook && secretKey) {
-        // Show the secret key to the user once
-        setNewlyCreatedSecret(secretKey);
+      if (!editingWebhook && rawSecret) {
+        // Show the raw secret to the user once (only hash is stored)
+        setNewlyCreatedSecret(rawSecret);
         toast({
           title: "Webhook Created",
           description: "Please save your signing secret - it won't be shown again!",
