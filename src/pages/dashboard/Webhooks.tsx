@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -70,6 +71,11 @@ export default function Webhooks() {
   const [isSaving, setIsSaving] = useState(false);
   const [showSecretKey, setShowSecretKey] = useState(false);
   const [newlyCreatedSecret, setNewlyCreatedSecret] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; webhook: WebhookData | null; isDeleting: boolean }>({
+    open: false,
+    webhook: null,
+    isDeleting: false,
+  });
   
   // Form state
   const [name, setName] = useState("");
@@ -282,11 +288,18 @@ export default function Webhooks() {
     });
   };
 
-  const handleDelete = async (id: string) => {
+  const confirmDeleteWebhook = (webhook: WebhookData) => {
+    setDeleteConfirm({ open: true, webhook, isDeleting: false });
+  };
+
+  const handleDelete = async () => {
+    if (!deleteConfirm.webhook) return;
+    
+    setDeleteConfirm(prev => ({ ...prev, isDeleting: true }));
     const { error } = await supabase
       .from("webhooks")
       .delete()
-      .eq("id", id);
+      .eq("id", deleteConfirm.webhook.id);
 
     if (error) {
       toast({
@@ -299,8 +312,9 @@ export default function Webhooks() {
         title: "Webhook Deleted",
         description: "The webhook has been deleted.",
       });
-      fetchWebhooks();
+      setWebhooks(prev => prev.filter(w => w.id !== deleteConfirm.webhook!.id));
     }
+    setDeleteConfirm({ open: false, webhook: null, isDeleting: false });
   };
 
   const toggleWebhookActive = async (id: string, isActive: boolean) => {
@@ -620,7 +634,7 @@ export default function Webhooks() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleDelete(webhook.id)}
+                        onClick={() => confirmDeleteWebhook(webhook)}
                         className="text-destructive hover:text-destructive"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -646,7 +660,7 @@ export default function Webhooks() {
                   <div key={log.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                     <div className="flex items-center gap-3">
                       {log.success ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        <CheckCircle2 className="h-4 w-4 text-success" />
                       ) : (
                         <XCircle className="h-4 w-4 text-destructive" />
                       )}
@@ -667,6 +681,18 @@ export default function Webhooks() {
           </Card>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteConfirm.open}
+        onOpenChange={(open) => setDeleteConfirm({ open, webhook: null, isDeleting: false })}
+        title="Delete Webhook"
+        description={`Are you sure you want to delete "${deleteConfirm.webhook?.name}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        onConfirm={handleDelete}
+        isLoading={deleteConfirm.isDeleting}
+        variant="destructive"
+      />
     </div>
   );
 }

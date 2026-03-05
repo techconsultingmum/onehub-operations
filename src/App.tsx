@@ -8,6 +8,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import Onboarding from "./pages/Onboarding";
 import { DashboardLayout } from "./components/dashboard/DashboardLayout";
 import DashboardHome from "./pages/dashboard/DashboardHome";
@@ -39,6 +40,10 @@ const router = createBrowserRouter(
     {
       path: "/auth",
       element: <Auth />,
+    },
+    {
+      path: "/reset-password",
+      element: <ResetPassword />,
     },
     {
       path: "/onboarding",
