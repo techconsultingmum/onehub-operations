@@ -681,6 +681,18 @@ export default function Webhooks() {
           </Card>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteConfirm.open}
+        onOpenChange={(open) => setDeleteConfirm({ open, webhook: null, isDeleting: false })}
+        title="Delete Webhook"
+        description={`Are you sure you want to delete "${deleteConfirm.webhook?.name}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        onConfirm={handleDelete}
+        isLoading={deleteConfirm.isDeleting}
+        variant="destructive"
+      />
     </div>
   );
 }
