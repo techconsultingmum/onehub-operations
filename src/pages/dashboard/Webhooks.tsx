@@ -14,7 +14,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { webhookUrlSchema, webhookNameSchema, generateSecretKey } from "@/lib/validation";
+import { webhookUrlSchema, webhookNameSchema, generateSecretKey, hashSecretKey } from "@/lib/validation";
 import { 
   Webhook, 
   Plus, 
