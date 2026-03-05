@@ -252,10 +252,11 @@ export default function Webhooks() {
 
   const handleRegenerateSecret = async (webhookId: string) => {
     const newSecret = generateSecretKey();
+    const newHash = await hashSecretKey(newSecret);
     
     const { error } = await supabase
       .from("webhooks")
-      .update({ secret_key: newSecret })
+      .update({ secret_key: newHash })
       .eq("id", webhookId);
 
     if (error) {
@@ -265,16 +266,11 @@ export default function Webhooks() {
         variant: "destructive",
       });
     } else {
-      toast({
-        title: "Secret Key Regenerated",
-        description: "Please update your webhook receiver with the new secret.",
-      });
-      
-      // Copy to clipboard
+      // Copy raw secret to clipboard - it's not stored anywhere
       await navigator.clipboard.writeText(newSecret);
       toast({
-        title: "Copied!",
-        description: "New secret key copied to clipboard.",
+        title: "Secret Key Regenerated",
+        description: "New secret copied to clipboard. Save it now — it won't be shown again.",
       });
       
       fetchWebhooks();
