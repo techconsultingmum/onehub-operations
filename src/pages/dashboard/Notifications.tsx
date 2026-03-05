@@ -53,12 +53,12 @@ interface NotificationPreferences {
 }
 
 const typeIcons: Record<string, React.ReactNode> = {
-  info: <Info className="h-4 w-4 text-blue-500" />,
-  success: <CheckCircle2 className="h-4 w-4 text-green-500" />,
-  warning: <AlertTriangle className="h-4 w-4 text-yellow-500" />,
+  info: <Info className="h-4 w-4 text-info" />,
+  success: <CheckCircle2 className="h-4 w-4 text-success" />,
+  warning: <AlertTriangle className="h-4 w-4 text-warning" />,
   error: <AlertCircle className="h-4 w-4 text-destructive" />,
   task: <ListTodo className="h-4 w-4 text-primary" />,
-  team: <Users className="h-4 w-4 text-purple-500" />,
+  team: <Users className="h-4 w-4 text-accent-foreground" />,
 };
 
 const actionLabels: Record<string, string> = {
