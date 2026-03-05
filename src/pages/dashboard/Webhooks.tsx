@@ -99,7 +99,7 @@ export default function Webhooks() {
     
     const { data, error } = await supabase
       .from("webhooks")
-      .select("*")
+      .select("id, name, url, type, events, is_active, last_triggered_at, created_at, secret_key")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
