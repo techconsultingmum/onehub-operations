@@ -41,6 +41,18 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     return <Navigate to="/onboarding" replace />;
   }
 
+  // If role-restricted route but role hasn't loaded yet, keep showing loading
+  if (allowedRoles && role === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Verifying permissions...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (allowedRoles && role && !allowedRoles.includes(role)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
