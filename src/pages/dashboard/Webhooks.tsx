@@ -634,7 +634,7 @@ export default function Webhooks() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleDelete(webhook.id)}
+                        onClick={() => confirmDeleteWebhook(webhook)}
                         className="text-destructive hover:text-destructive"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -660,7 +660,7 @@ export default function Webhooks() {
                   <div key={log.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                     <div className="flex items-center gap-3">
                       {log.success ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        <CheckCircle2 className="h-4 w-4 text-success" />
                       ) : (
                         <XCircle className="h-4 w-4 text-destructive" />
                       )}
