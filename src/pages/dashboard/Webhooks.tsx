@@ -14,7 +14,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { webhookUrlSchema, webhookNameSchema, generateSecretKey } from "@/lib/validation";
+import { webhookUrlSchema, webhookNameSchema, generateSecretKey, hashSecretKey } from "@/lib/validation";
 import { 
   Webhook, 
   Plus, 
@@ -99,7 +99,7 @@ export default function Webhooks() {
     
     const { data, error } = await supabase
       .from("webhooks")
-      .select("*")
+      .select("id, name, url, type, events, is_active, last_triggered_at, created_at, secret_key")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
@@ -195,8 +195,9 @@ export default function Webhooks() {
 
     setIsSaving(true);
 
-    // Generate secret key for new webhooks
-    const secretKey = editingWebhook ? undefined : generateSecretKey();
+    // Generate secret key for new webhooks, store only the hash
+    const rawSecret = editingWebhook ? undefined : generateSecretKey();
+    const secretKeyHash = rawSecret ? await hashSecretKey(rawSecret) : undefined;
 
     let error;
     if (editingWebhook) {
@@ -218,7 +219,7 @@ export default function Webhooks() {
           type,
           events: selectedEvents,
           user_id: user.id,
-          secret_key: secretKey,
+          secret_key: secretKeyHash,
         }));
     }
 
@@ -231,9 +232,9 @@ export default function Webhooks() {
         variant: "destructive",
       });
     } else {
-      if (!editingWebhook && secretKey) {
-        // Show the secret key to the user once
-        setNewlyCreatedSecret(secretKey);
+      if (!editingWebhook && rawSecret) {
+        // Show the raw secret to the user once (only hash is stored)
+        setNewlyCreatedSecret(rawSecret);
         toast({
           title: "Webhook Created",
           description: "Please save your signing secret - it won't be shown again!",
@@ -251,10 +252,11 @@ export default function Webhooks() {
 
   const handleRegenerateSecret = async (webhookId: string) => {
     const newSecret = generateSecretKey();
+    const newHash = await hashSecretKey(newSecret);
     
     const { error } = await supabase
       .from("webhooks")
-      .update({ secret_key: newSecret })
+      .update({ secret_key: newHash })
       .eq("id", webhookId);
 
     if (error) {
@@ -264,16 +266,11 @@ export default function Webhooks() {
         variant: "destructive",
       });
     } else {
-      toast({
-        title: "Secret Key Regenerated",
-        description: "Please update your webhook receiver with the new secret.",
-      });
-      
-      // Copy to clipboard
+      // Copy raw secret to clipboard - it's not stored anywhere
       await navigator.clipboard.writeText(newSecret);
       toast({
-        title: "Copied!",
-        description: "New secret key copied to clipboard.",
+        title: "Secret Key Regenerated",
+        description: "New secret copied to clipboard. Save it now — it won't be shown again.",
       });
       
       fetchWebhooks();
