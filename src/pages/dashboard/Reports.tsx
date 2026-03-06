@@ -75,7 +75,7 @@ export default function Reports() {
     ? Math.round((taskStats.completed / taskStats.total) * 100) 
     : 0;
 
-  const avgCompletionTime = taskStats.total > 0 ? "2.3 days" : "N/A";
+  
 
   const distributionData = [
     { name: "Completed", value: taskStats.completed, color: "hsl(var(--success))" },
