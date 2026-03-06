@@ -142,14 +142,14 @@ export default function SettingsPage() {
   const updateNotificationPref = async (key: string, value: boolean) => {
     if (!user) return;
 
-    setNotificationPrefs(prev => ({ ...prev, [key]: value }));
+    const updatedPrefs = { ...notificationPrefs, [key]: value };
+    setNotificationPrefs(updatedPrefs);
 
     const { error } = await supabase
       .from("notification_preferences")
       .upsert({
         user_id: user.id,
-        ...notificationPrefs,
-        [key]: value,
+        ...updatedPrefs,
       }, {
         onConflict: "user_id",
       });

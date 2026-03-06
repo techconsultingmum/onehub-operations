@@ -538,7 +538,7 @@ export default function DataImport() {
             {importResult && (
               <div className="space-y-4">
                 <div className="flex items-center gap-4 p-4 rounded-lg bg-muted">
-                  <div className="flex items-center gap-2 text-green-600">
+                  <div className="flex items-center gap-2 text-success">
                     <Check className="h-5 w-5" />
                     <span>{importResult.success} imported</span>
                   </div>
