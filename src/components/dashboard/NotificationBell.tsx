@@ -23,12 +23,12 @@ interface Notification {
 }
 
 const typeColors: Record<string, string> = {
-  info: "bg-blue-500",
-  success: "bg-green-500",
-  warning: "bg-yellow-500",
+  info: "bg-info",
+  success: "bg-success",
+  warning: "bg-warning",
   error: "bg-destructive",
   task: "bg-primary",
-  team: "bg-purple-500",
+  team: "bg-accent-foreground",
 };
 
 export function NotificationBell() {
@@ -42,7 +42,6 @@ export function NotificationBell() {
     if (user) {
       fetchNotifications();
       
-      // Subscribe to realtime updates
       const channel = supabase
         .channel("notifications")
         .on(

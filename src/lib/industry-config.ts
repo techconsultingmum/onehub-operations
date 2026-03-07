@@ -31,6 +31,7 @@ export const industries: Industry[] = [
   { value: "finance", label: "Finance & Banking", description: "Financial services" },
   { value: "technology", label: "Technology & IT", description: "Software and tech services" },
   { value: "property", label: "Property Management", description: "Real estate management" },
+  { value: "society", label: "Housing Society & Cluster", description: "Residential societies, apartments, and clusters" },
 ];
 
 // All available management types
@@ -63,6 +64,10 @@ export const managementTypes: ManagementType[] = [
   { value: "content", label: "Content Management", description: "Media content organization" },
   { value: "campaign", label: "Campaign Management", description: "Marketing campaigns" },
   { value: "tenant", label: "Tenant Management", description: "Property tenants and leases" },
+  { value: "maintenance", label: "Maintenance & Complaints", description: "Track repairs, complaints, and service requests" },
+  { value: "visitor", label: "Visitor Management", description: "Gate passes, visitor logs, and approvals" },
+  { value: "amenity", label: "Amenity & Booking", description: "Common area and facility bookings" },
+  { value: "dues", label: "Dues & Billing", description: "Maintenance dues, invoices, and payments" },
 ];
 
 // Mapping of industries to their relevant management types
@@ -126,6 +131,11 @@ export const industryManagementMapping: Record<string, string[]> = {
   property: [
     "tenant", "facility", "team", "document", "compliance", "vendor", 
     "finance", "inventory", "communication", "task", "project", "operations"
+  ],
+  society: [
+    "tenant", "maintenance", "visitor", "amenity", "dues", "facility",
+    "communication", "document", "compliance", "team", "task", "finance",
+    "vendor", "operations"
   ],
 };
 
