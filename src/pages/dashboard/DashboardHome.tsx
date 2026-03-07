@@ -219,7 +219,7 @@ export default function DashboardHome() {
               <div className="text-2xl font-bold">
                 {widget.id === "tasks_overview" && stats.totalTasks}
                 {widget.id === "team_overview" && stats.teamMembers}
-                {widget.id === "time_tracking" && `${Math.floor(Math.random() * 40 + 120)}h`}
+                {widget.id === "time_tracking" && "—"}
                 {!["tasks_overview", "team_overview", "time_tracking"].includes(widget.id) && "—"}
               </div>
               <p className="text-xs text-muted-foreground mt-1">{widget.description}</p>

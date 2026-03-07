@@ -339,6 +339,40 @@ export const widgetDefinitions: Record<string, DashboardWidget> = {
     type: "list",
     size: "md",
   },
+
+  // Society / Housing widgets
+  maintenance_requests: {
+    id: "maintenance_requests",
+    title: "Maintenance Requests",
+    description: "Open complaints and repairs",
+    icon: Settings,
+    type: "stats",
+    size: "md",
+  },
+  visitor_log: {
+    id: "visitor_log",
+    title: "Visitor Log",
+    description: "Recent visitor entries",
+    icon: Users,
+    type: "list",
+    size: "md",
+  },
+  amenity_bookings: {
+    id: "amenity_bookings",
+    title: "Amenity Bookings",
+    description: "Common area reservations",
+    icon: Calendar,
+    type: "list",
+    size: "md",
+  },
+  dues_overview: {
+    id: "dues_overview",
+    title: "Dues & Payments",
+    description: "Maintenance dues collection",
+    icon: DollarSign,
+    type: "stats",
+    size: "md",
+  },
 };
 
 // Mapping of management types to their widgets
@@ -371,6 +405,10 @@ export const managementTypeWidgets: Record<string, string[]> = {
   content: ["content_overview", "campaign_performance", "recent_documents"],
   campaign: ["campaign_performance", "customer_overview", "sales_metrics"],
   tenant: ["tenant_overview", "lease_status", "financial_summary", "facility_status"],
+  maintenance: ["maintenance_requests", "tasks_overview", "team_overview", "facility_status"],
+  visitor: ["visitor_log", "team_overview", "tasks_overview"],
+  amenity: ["amenity_bookings", "facility_status", "tasks_overview"],
+  dues: ["dues_overview", "financial_summary", "tenant_overview"],
 };
 
 // Get widgets for a management type
