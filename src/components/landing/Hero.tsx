@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Play, Sparkles, ChevronDown, Building2, Factory, GraduationCap, HeartPulse, Truck, ShoppingBag, Briefcase, Hammer, Leaf, Plane, Utensils, Film, Landmark, Cpu, Home } from "lucide-react";
-import { Link } from "react-router-dom";
+import { ArrowRight, Play, Sparkles, ChevronDown, Building2, Factory, GraduationCap, HeartPulse, Truck, ShoppingBag, Briefcase, Hammer, Leaf, Plane, Utensils, Film, Landmark, Cpu, Home, Building } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -35,6 +35,7 @@ const industries = [
   { value: "finance", label: "Finance & Banking", icon: Landmark },
   { value: "technology", label: "Technology & IT", icon: Cpu },
   { value: "property", label: "Property Management", icon: Home },
+  { value: "society", label: "Housing Society & Cluster", icon: Building },
 ];
 
 const managementTypes = [
@@ -56,12 +57,15 @@ const managementTypes = [
   { value: "performance", label: "Performance Management" },
   { value: "document", label: "Document Management" },
   { value: "communication", label: "Communication & Collaboration" },
+  { value: "tenant", label: "Tenant & Member Management" },
+  { value: "maintenance", label: "Maintenance & Complaints" },
 ];
 
 export function Hero() {
   const [selectedIndustry, setSelectedIndustry] = useState<string>("");
   const [selectedManagement, setSelectedManagement] = useState<string>("");
   const [showDemoModal, setShowDemoModal] = useState(false);
+  const navigate = useNavigate();
 
   const canStart = selectedIndustry && selectedManagement;
 
@@ -95,7 +99,7 @@ export function Hero() {
           {/* Subheading */}
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 animate-fade-in" style={{ animationDelay: "0.2s" }}>
             Centralize your operations, coordinate teams, and scale your business with
-            our unified management platform. Built for SMEs to enterprises across every sector.
+            our unified management platform. Built for SMEs to enterprises — including housing societies and clusters.
           </p>
 
           {/* Industry & Management Selectors */}
@@ -289,7 +293,7 @@ export function Hero() {
                 className="mt-6" 
                 onClick={() => {
                   setShowDemoModal(false);
-                  window.location.href = "/auth";
+                  navigate("/auth");
                 }}
               >
                 Try It Now

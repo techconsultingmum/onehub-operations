@@ -9,37 +9,29 @@ interface Props {
 
 interface State {
   hasError: boolean;
-  error: Error | null;
+  errorId: string | null;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
-    error: null,
+    errorId: null,
   };
 
-  public static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+  public static getDerivedStateFromError(): State {
+    return { hasError: true, errorId: `err_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 7)}` };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Only log full error details in development mode
     if (import.meta.env.DEV) {
       console.error("Uncaught error:", error, errorInfo);
     } else {
-      // In production, log minimal information to avoid exposing internal details
-      console.error("An unexpected error occurred. Error ID:", this.generateErrorId());
-      // In a production app, you would send to an error tracking service like Sentry
-      // reportErrorToService(error, errorInfo);
+      console.error("An unexpected error occurred. Error ID:", this.state.errorId);
     }
   }
 
-  private generateErrorId(): string {
-    return `err_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 7)}`;
-  }
-
   private handleReset = () => {
-    this.setState({ hasError: false, error: null });
+    this.setState({ hasError: false, errorId: null });
   };
 
   public render() {
@@ -57,6 +49,11 @@ export class ErrorBoundary extends Component<Props, State> {
           <p className="text-muted-foreground mb-6 max-w-md">
             An unexpected error occurred. Please try refreshing the page or contact support if the problem persists.
           </p>
+          {this.state.errorId && (
+            <p className="text-xs text-muted-foreground mb-4">
+              Error ID: <code className="bg-muted px-2 py-0.5 rounded">{this.state.errorId}</code>
+            </p>
+          )}
           <div className="flex gap-3">
             <Button onClick={this.handleReset} variant="outline" className="gap-2">
               <RefreshCw className="w-4 h-4" />
@@ -66,16 +63,6 @@ export class ErrorBoundary extends Component<Props, State> {
               Refresh Page
             </Button>
           </div>
-          {this.state.error && (
-            <details className="mt-6 text-left w-full max-w-lg">
-              <summary className="text-sm text-muted-foreground cursor-pointer">
-                Error details
-              </summary>
-              <pre className="mt-2 p-3 bg-muted rounded-lg text-xs overflow-auto">
-                {this.state.error.message}
-              </pre>
-            </details>
-          )}
         </div>
       );
     }

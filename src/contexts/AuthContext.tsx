@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -32,41 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [configuration, setConfiguration] = useState<UserConfiguration | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        // Defer fetching additional data
-        if (session?.user) {
-          setTimeout(() => {
-            fetchUserRole(session.user.id);
-            fetchUserConfiguration(session.user.id);
-          }, 0);
-        } else {
-          setRole(null);
-          setConfiguration(null);
-        }
-      }
-    );
-
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserRole(session.user.id);
-        fetchUserConfiguration(session.user.id);
-      }
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const fetchUserRole = async (userId: string) => {
+  const fetchUserRole = useCallback(async (userId: string) => {
     const { data, error } = await supabase
       .from("user_roles")
       .select("role")
@@ -76,9 +42,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!error && data) {
       setRole(data.role as AppRole);
     }
-  };
+  }, []);
 
-  const fetchUserConfiguration = async (userId: string) => {
+  const fetchUserConfiguration = useCallback(async (userId: string) => {
     const { data, error } = await supabase
       .from("user_configurations")
       .select("industry, management_type, additional_management_types")
@@ -92,7 +58,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         additional_management_types: data.additional_management_types || [],
       });
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (!isMounted) return;
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          // Use queueMicrotask to avoid Supabase deadlocks
+          queueMicrotask(() => {
+            if (isMounted) {
+              fetchUserRole(session.user.id);
+              fetchUserConfiguration(session.user.id);
+            }
+          });
+        } else {
+          setRole(null);
+          setConfiguration(null);
+        }
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isMounted) return;
+      
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchUserRole(session.user.id);
+        fetchUserConfiguration(session.user.id);
+      }
+      setLoading(false);
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, [fetchUserRole, fetchUserConfiguration]);
 
   const signUp = async (email: string, password: string, fullName: string) => {
     const redirectUrl = `${window.location.origin}/`;
