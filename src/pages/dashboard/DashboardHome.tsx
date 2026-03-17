@@ -92,29 +92,6 @@ const sampleChartData = [
 
 const pieColors = ["hsl(var(--primary))", "hsl(var(--secondary))", "hsl(var(--accent))", "hsl(var(--muted))"];
 
-// Icon mapping
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  CheckSquare,
-  Users,
-  TrendingUp,
-  Clock,
-  Package,
-  DollarSign,
-  BarChart3,
-  FileText,
-  Truck,
-  Calendar,
-  UserCheck,
-  GraduationCap,
-  Utensils,
-  Building,
-  Heart,
-  MessageSquare,
-  Target,
-  ShieldCheck,
-  Briefcase,
-  Settings,
-};
 
 export default function DashboardHome() {
   const { user, configuration, role } = useAuth();
