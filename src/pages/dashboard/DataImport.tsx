@@ -461,7 +461,7 @@ export default function DataImport() {
                           </td>
                           <td className="px-4 py-2">
                             <Select 
-                              value={mapping.targetColumn} 
+                              value={mapping.targetColumn || "__skip__"} 
                               onValueChange={(v) => updateMapping(mapping.csvColumn, v)}
                             >
                               <SelectTrigger className="w-48">
