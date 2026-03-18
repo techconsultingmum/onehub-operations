@@ -59,6 +59,9 @@ const managementTypes = [
   { value: "communication", label: "Communication & Collaboration" },
   { value: "tenant", label: "Tenant & Member Management" },
   { value: "maintenance", label: "Maintenance & Complaints" },
+  { value: "visitor_management", label: "Visitor Management" },
+  { value: "amenity_booking", label: "Amenity & Booking" },
+  { value: "dues_billing", label: "Dues & Billing" },
 ];
 
 export function Hero() {

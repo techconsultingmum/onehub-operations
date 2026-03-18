@@ -133,8 +133,9 @@ export default function DataImport() {
   };
 
   const updateMapping = (csvColumn: string, targetColumn: string) => {
+    const resolvedTarget = targetColumn === "__skip__" ? "" : targetColumn;
     setColumnMappings(prev => 
-      prev.map(m => m.csvColumn === csvColumn ? { ...m, targetColumn } : m)
+      prev.map(m => m.csvColumn === csvColumn ? { ...m, targetColumn: resolvedTarget } : m)
     );
   };
 
@@ -460,14 +461,14 @@ export default function DataImport() {
                           </td>
                           <td className="px-4 py-2">
                             <Select 
-                              value={mapping.targetColumn} 
+                              value={mapping.targetColumn || "__skip__"} 
                               onValueChange={(v) => updateMapping(mapping.csvColumn, v)}
                             >
                               <SelectTrigger className="w-48">
                                 <SelectValue placeholder="Skip this column" />
                               </SelectTrigger>
                               <SelectContent className="bg-background border-border">
-                                <SelectItem value="">Skip this column</SelectItem>
+                                <SelectItem value="__skip__">Skip this column</SelectItem>
                                 {selectedTableConfig.columns.map(col => (
                                   <SelectItem key={col} value={col}>
                                     {col.replace(/_/g, " ")}
