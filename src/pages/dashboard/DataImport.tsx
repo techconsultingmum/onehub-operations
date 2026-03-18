@@ -467,7 +467,7 @@ export default function DataImport() {
                                 <SelectValue placeholder="Skip this column" />
                               </SelectTrigger>
                               <SelectContent className="bg-background border-border">
-                                <SelectItem value="">Skip this column</SelectItem>
+                                <SelectItem value="__skip__">Skip this column</SelectItem>
                                 {selectedTableConfig.columns.map(col => (
                                   <SelectItem key={col} value={col}>
                                     {col.replace(/_/g, " ")}
