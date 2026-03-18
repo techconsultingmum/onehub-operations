@@ -69,7 +69,6 @@ const sampleChartData = [
   { name: "Sun", value: 5 },
 ];
 
-const pieColors = ["hsl(var(--primary))", "hsl(var(--secondary))", "hsl(var(--accent))", "hsl(var(--muted))"];
 
 
 export default function DashboardHome() {

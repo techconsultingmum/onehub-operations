@@ -6,17 +6,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
   ResponsiveContainer,
   PieChart,
   Pie,
   Cell,
   Legend,
+  Tooltip,
 } from "recharts";
 
 interface TaskStats {

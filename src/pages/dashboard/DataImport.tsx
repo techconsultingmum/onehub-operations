@@ -133,8 +133,9 @@ export default function DataImport() {
   };
 
   const updateMapping = (csvColumn: string, targetColumn: string) => {
+    const resolvedTarget = targetColumn === "__skip__" ? "" : targetColumn;
     setColumnMappings(prev => 
-      prev.map(m => m.csvColumn === csvColumn ? { ...m, targetColumn } : m)
+      prev.map(m => m.csvColumn === csvColumn ? { ...m, targetColumn: resolvedTarget } : m)
     );
   };
 
