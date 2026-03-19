@@ -255,7 +255,7 @@ export function Hero() {
                 <div className="flex-1 text-center">
                   <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-background text-xs text-muted-foreground">
                     <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
-                    app.managex.io/dashboard
+                    dashboard
                   </div>
                 </div>
               </div>
