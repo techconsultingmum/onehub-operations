@@ -105,7 +105,7 @@ export default function DashboardHome() {
     if (user) {
       fetchDashboardData();
     }
-  }, [user]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchDashboardData = async () => {
     if (!user) return;
