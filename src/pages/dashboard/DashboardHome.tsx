@@ -73,6 +73,7 @@ const sampleChartData = [
 
 
 export default function DashboardHome() {
+  useDocumentTitle("Dashboard");
   const { user, configuration, role } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
