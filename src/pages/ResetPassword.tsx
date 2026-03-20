@@ -13,6 +13,7 @@ import { z } from "zod";
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
 
 export default function ResetPassword() {
+  useDocumentTitle("Reset Password");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
