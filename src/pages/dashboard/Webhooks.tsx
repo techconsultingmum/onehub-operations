@@ -559,19 +559,19 @@ export default function Webhooks() {
           <div className="grid gap-4">
             {webhooks.map(webhook => (
               <Card key={webhook.id}>
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-4">
-                      <div className={`p-2 rounded-lg ${webhook.type === "slack" ? "bg-[#4A154B]" : "bg-primary/10"}`}>
+                <CardContent className="p-4 md:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                    <div className="flex items-start gap-3 md:gap-4 min-w-0 flex-1">
+                      <div className={`p-2 rounded-lg flex-shrink-0 ${webhook.type === "slack" ? "bg-[#4A154B]" : "bg-primary/10"}`}>
                         {webhook.type === "slack" ? (
                           <SlackIcon className="h-5 w-5 text-white" />
                         ) : (
                           <Webhook className="h-5 w-5 text-primary" />
                         )}
                       </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold">{webhook.name}</h3>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="font-semibold truncate">{webhook.name}</h3>
                           <Badge variant={webhook.is_active ? "default" : "secondary"}>
                             {webhook.is_active ? "Active" : "Paused"}
                           </Badge>
@@ -582,8 +582,8 @@ export default function Webhooks() {
                             </Badge>
                           )}
                         </div>
-                        <p className="text-sm text-muted-foreground mt-1 font-mono">
-                          {webhook.url.length > 50 ? webhook.url.slice(0, 50) + "..." : webhook.url}
+                        <p className="text-sm text-muted-foreground mt-1 font-mono truncate">
+                          {webhook.url}
                         </p>
                         <div className="flex flex-wrap gap-1 mt-2">
                           {webhook.events.map(event => (
@@ -600,10 +600,11 @@ export default function Webhooks() {
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-shrink-0 self-end sm:self-start">
                       <Switch
                         checked={webhook.is_active}
                         onCheckedChange={(checked) => toggleWebhookActive(webhook.id, checked)}
+                        aria-label={`Toggle ${webhook.name}`}
                       />
                       {webhook.secret_key && (
                         <Button
@@ -627,6 +628,7 @@ export default function Webhooks() {
                         variant="ghost"
                         size="icon"
                         onClick={() => openEditDialog(webhook)}
+                        title="Edit"
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -635,6 +637,7 @@ export default function Webhooks() {
                         size="icon"
                         onClick={() => confirmDeleteWebhook(webhook)}
                         className="text-destructive hover:text-destructive"
+                        title="Delete"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
