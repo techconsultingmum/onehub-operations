@@ -19,6 +19,7 @@ import {
 } from "@/lib/industry-config";
 
 export default function Onboarding() {
+  useDocumentTitle("Setup Your Workspace");
   const [searchParams] = useSearchParams();
   const [industry, setIndustry] = useState(searchParams.get("industry") || "");
   const [primaryManagementType, setPrimaryManagementType] = useState(searchParams.get("management") || "");
