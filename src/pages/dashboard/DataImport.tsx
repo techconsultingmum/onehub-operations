@@ -45,6 +45,7 @@ const targetTables = [
 ];
 
 export default function DataImport() {
+  useDocumentTitle("Data Import");
   const [file, setFile] = useState<File | null>(null);
   const [targetTable, setTargetTable] = useState("");
   const [csvData, setCsvData] = useState<CSVPreviewData | null>(null);

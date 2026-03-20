@@ -51,6 +51,7 @@ const departments = [
 ];
 
 export default function Team() {
+  useDocumentTitle("Team");
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");

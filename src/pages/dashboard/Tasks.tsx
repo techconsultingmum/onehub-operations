@@ -41,6 +41,7 @@ const priorityBadges = {
 };
 
 export default function Tasks() {
+  useDocumentTitle("Tasks");
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");

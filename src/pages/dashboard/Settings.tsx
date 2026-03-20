@@ -22,6 +22,7 @@ import {
 } from "@/lib/industry-config";
 
 export default function SettingsPage() {
+  useDocumentTitle("Settings");
   const { user, configuration, updateAdditionalManagementTypes } = useAuth();
   const { toast } = useToast();
   

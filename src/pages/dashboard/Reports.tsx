@@ -23,6 +23,7 @@ interface TaskStats {
 }
 
 export default function Reports() {
+  useDocumentTitle("Reports");
   const { user } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);

@@ -64,6 +64,7 @@ const eventTypes = [
 ];
 
 export default function Webhooks() {
+  useDocumentTitle("Webhooks");
   const [webhooks, setWebhooks] = useState<WebhookData[]>([]);
   const [webhookLogs, setWebhookLogs] = useState<WebhookLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);

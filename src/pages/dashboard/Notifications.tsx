@@ -71,6 +71,7 @@ const actionLabels: Record<string, string> = {
 };
 
 export default function Notifications() {
+  useDocumentTitle("Notifications");
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
