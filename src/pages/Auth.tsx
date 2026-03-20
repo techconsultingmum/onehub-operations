@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, ArrowLeft, Eye, EyeOff, Mail } from "lucide-react";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { z } from "zod";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +18,7 @@ const passwordSchema = z.string().min(6, "Password must be at least 6 characters
 const nameSchema = z.string().trim().min(2, "Name must be at least 2 characters").max(100, "Name is too long");
 
 export default function Auth() {
+  useDocumentTitle("Sign In");
   const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("login");

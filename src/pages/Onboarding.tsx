@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Building2, Settings2, Plus, X, AlertCircle } from "lucide-react";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { 
   industries, 
   getManagementTypesForIndustry,
@@ -18,6 +19,7 @@ import {
 } from "@/lib/industry-config";
 
 export default function Onboarding() {
+  useDocumentTitle("Setup Your Workspace");
   const [searchParams] = useSearchParams();
   const [industry, setIndustry] = useState(searchParams.get("industry") || "");
   const [primaryManagementType, setPrimaryManagementType] = useState(searchParams.get("management") || "");

@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -72,6 +73,7 @@ const sampleChartData = [
 
 
 export default function DashboardHome() {
+  useDocumentTitle("Dashboard");
   const { user, configuration, role } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
@@ -103,7 +105,7 @@ export default function DashboardHome() {
     if (user) {
       fetchDashboardData();
     }
-  }, [user]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchDashboardData = async () => {
     if (!user) return;

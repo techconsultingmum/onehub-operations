@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,6 +45,7 @@ const targetTables = [
 ];
 
 export default function DataImport() {
+  useDocumentTitle("Data Import");
   const [file, setFile] = useState<File | null>(null);
   const [targetTable, setTargetTable] = useState("");
   const [csvData, setCsvData] = useState<CSVPreviewData | null>(null);

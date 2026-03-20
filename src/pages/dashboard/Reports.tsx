@@ -2,6 +2,7 @@ import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { Button } from "@/components/ui/button";
 import { Download, Calendar, TrendingUp, Users, CheckSquare, Clock, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +23,7 @@ interface TaskStats {
 }
 
 export default function Reports() {
+  useDocumentTitle("Reports");
   const { user } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
