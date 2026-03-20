@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
