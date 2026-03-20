@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, ArrowLeft, Eye, EyeOff, Mail } from "lucide-react";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { z } from "zod";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
