@@ -19,6 +19,7 @@ import SettingsPage from "./pages/dashboard/Settings";
 import DataImport from "./pages/dashboard/DataImport";
 import Webhooks from "./pages/dashboard/Webhooks";
 import Notifications from "./pages/dashboard/Notifications";
+import Complaints from "./pages/dashboard/Complaints";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
