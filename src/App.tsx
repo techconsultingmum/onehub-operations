@@ -68,6 +68,7 @@ const App = () => (
                 <Route path="settings" element={<SettingsPage />} />
                 <Route path="import" element={<DataImport />} />
                 <Route path="webhooks" element={<Webhooks />} />
+                <Route path="complaints" element={<Complaints />} />
                 <Route path="notifications" element={<Notifications />} />
               </Route>
               <Route path="*" element={<NotFound />} />
