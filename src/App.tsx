@@ -19,6 +19,7 @@ import SettingsPage from "./pages/dashboard/Settings";
 import DataImport from "./pages/dashboard/DataImport";
 import Webhooks from "./pages/dashboard/Webhooks";
 import Notifications from "./pages/dashboard/Notifications";
+import Complaints from "./pages/dashboard/Complaints";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -67,6 +68,7 @@ const App = () => (
                 <Route path="settings" element={<SettingsPage />} />
                 <Route path="import" element={<DataImport />} />
                 <Route path="webhooks" element={<Webhooks />} />
+                <Route path="complaints" element={<Complaints />} />
                 <Route path="notifications" element={<Notifications />} />
               </Route>
               <Route path="*" element={<NotFound />} />

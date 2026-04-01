@@ -21,6 +21,7 @@ import {
   Target,
   Building,
   MessageSquare,
+  AlertTriangle,
   LucideIcon,
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
@@ -35,6 +36,7 @@ const baseNavigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Tasks", href: "/dashboard/tasks", icon: CheckSquare },
   { name: "Team", href: "/dashboard/team", icon: Users },
+  { name: "Complaints", href: "/dashboard/complaints", icon: AlertTriangle },
   { name: "Reports", href: "/dashboard/reports", icon: BarChart3 },
   { name: "Data Import", href: "/dashboard/import", icon: FileSpreadsheet },
   { name: "Webhooks", href: "/dashboard/webhooks", icon: Webhook },
