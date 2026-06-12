@@ -22,6 +22,8 @@ import {
   Building,
   MessageSquare,
   AlertTriangle,
+  Sparkles,
+  History,
   LucideIcon,
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
@@ -37,10 +39,13 @@ const baseNavigation = [
   { name: "Tasks", href: "/dashboard/tasks", icon: CheckSquare },
   { name: "Team", href: "/dashboard/team", icon: Users },
   { name: "Complaints", href: "/dashboard/complaints", icon: AlertTriangle },
+  { name: "Activity Log", href: "/dashboard/activity", icon: History },
   { name: "Reports", href: "/dashboard/reports", icon: BarChart3 },
   { name: "Data Import", href: "/dashboard/import", icon: FileSpreadsheet },
   { name: "Webhooks", href: "/dashboard/webhooks", icon: Webhook },
+  { name: "Setup Wizard", href: "/dashboard/setup", icon: Sparkles },
 ];
+
 
 // Additional navigation items for specific management types
 const managementNavItems: Record<string, { name: string; href: string; icon: LucideIcon }> = {
