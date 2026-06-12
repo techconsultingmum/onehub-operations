@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { validateTaskRow, validateTeamMemberRow, parseCSVSafely, parseCSVForImport, sanitizeCSVCell } from "@/lib/validation";
+import { GoogleSheetsImport } from "@/components/dashboard/GoogleSheetsImport";
 import { 
   Upload, 
   Download, 
@@ -387,6 +388,9 @@ export default function DataImport() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Google Sheets Import */}
+        <GoogleSheetsImport />
 
         {/* Import Section */}
         <Card>

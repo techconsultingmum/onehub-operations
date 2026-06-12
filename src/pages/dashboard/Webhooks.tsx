@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { webhookUrlSchema, webhookNameSchema, generateSecretKey, hashSecretKey } from "@/lib/validation";
+import { WebhookTesterDialog } from "@/components/dashboard/WebhookTesterDialog";
 import { 
   Webhook, 
   Plus, 
@@ -78,6 +79,7 @@ export default function Webhooks() {
     webhook: null,
     isDeleting: false,
   });
+  const [testerWebhook, setTesterWebhook] = useState<WebhookData | null>(null);
   
   // Form state
   const [name, setName] = useState("");
@@ -335,21 +337,10 @@ export default function Webhooks() {
     }
   };
 
-  const testWebhook = async (webhook: WebhookData) => {
-    toast({
-      title: "Testing Webhook",
-      description: `Sending test payload to ${webhook.name}...`,
-    });
-
-    // In a real implementation, this would call an edge function to send the test
-    // For now, we'll simulate it
-    setTimeout(() => {
-      toast({
-        title: "Test Complete",
-        description: "Check your webhook endpoint for the test payload.",
-      });
-    }, 1000);
+  const testWebhook = (webhook: WebhookData) => {
+    setTesterWebhook(webhook);
   };
+
 
   if (isLoading) {
     return (
@@ -683,6 +674,13 @@ export default function Webhooks() {
           </Card>
         )}
       </div>
+
+      {/* Webhook Tester */}
+      <WebhookTesterDialog
+        webhook={testerWebhook}
+        open={!!testerWebhook}
+        onOpenChange={(o) => { if (!o) { setTesterWebhook(null); fetchWebhookLogs(); } }}
+      />
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
