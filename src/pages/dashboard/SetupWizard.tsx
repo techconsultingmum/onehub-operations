@@ -126,7 +126,6 @@ export default function SetupWizard() {
           name: i.email.split("@")[0],
           role: i.role,
           department: null,
-          status: "invited",
         }));
         const { error: tmErr } = await supabase.from("team_members").insert(rows);
         if (tmErr) throw tmErr;
