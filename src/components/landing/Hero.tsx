@@ -238,31 +238,6 @@ export function Hero() {
           </div>
         </div>
 
-        {/* Dashboard Preview */}
-        <div className="mt-20 max-w-6xl mx-auto animate-fade-in" style={{ animationDelay: "0.5s" }}>
-          <div className="relative">
-            {/* Glow Effect */}
-            <div className="absolute -inset-4 bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 rounded-3xl blur-2xl opacity-50" aria-hidden="true" />
-            
-            {/* Dashboard Preview Card */}
-            <div className="relative bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/30" aria-hidden="true">
-                <div className="flex gap-1.5">
-                  <div className="w-3 h-3 rounded-full bg-destructive/60" />
-                  <div className="w-3 h-3 rounded-full bg-warning/60" />
-                  <div className="w-3 h-3 rounded-full bg-success/60" />
-                </div>
-                <div className="flex-1 text-center">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-background text-xs text-muted-foreground">
-                    <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
-                    dashboard
-                  </div>
-                </div>
-              </div>
-              
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Demo Modal */}
