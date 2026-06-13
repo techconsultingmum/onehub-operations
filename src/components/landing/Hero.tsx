@@ -260,15 +260,6 @@ export function Hero() {
                 </div>
               </div>
               
-              <div className="aspect-[16/9] bg-gradient-to-br from-muted/50 to-muted flex items-center justify-center">
-                <div className="text-center p-8">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4">
-                    <Sparkles className="w-8 h-8 text-primary" aria-hidden="true" />
-                  </div>
-                  <p className="text-muted-foreground text-lg">Interactive Dashboard Preview</p>
-                  <p className="text-sm text-muted-foreground/60 mt-1">Click "Get Started" to explore</p>
-                </div>
-              </div>
             </div>
           </div>
         </div>
