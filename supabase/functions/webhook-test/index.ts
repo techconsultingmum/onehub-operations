@@ -114,8 +114,7 @@ Deno.serve(async (req) => {
     try { parsed = new URL(webhook.url); } catch { return json({ error: "Invalid webhook URL" }, 400); }
     if (parsed.protocol !== "https:") return json({ error: "Only https:// URLs allowed" }, 400);
     const host = parsed.hostname.toLowerCase();
-    const blocked = ["localhost", "127.0.0.1", "0.0.0.0", "::1"];
-    if (blocked.includes(host) || host.endsWith(".local") || host.startsWith("169.254.")) {
+    if (await isBlockedHost(host)) {
       return json({ error: "URL points to a non-public host" }, 400);
     }
 
