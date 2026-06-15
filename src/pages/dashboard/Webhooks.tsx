@@ -49,9 +49,12 @@ interface WebhookData {
 
 interface WebhookLog {
   id: string;
+  webhook_id: string;
   event_type: string;
   success: boolean;
   response_status: number | null;
+  payload: Record<string, unknown> | null;
+  error_message: string | null;
   created_at: string;
 }
 
@@ -121,15 +124,47 @@ export default function Webhooks() {
 
   const fetchWebhookLogs = async () => {
     if (!user) return;
-    
+
     const { data } = await supabase
       .from("webhook_logs")
-      .select("*")
+      .select("id, webhook_id, event_type, success, response_status, payload, error_message, created_at")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(20);
 
-    setWebhookLogs(data || []);
+    setWebhookLogs((data as WebhookLog[]) || []);
+  };
+
+  const [retryingLogId, setRetryingLogId] = useState<string | null>(null);
+
+  const handleRetryDelivery = async (log: WebhookLog) => {
+    setRetryingLogId(log.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("webhook-test", {
+        body: {
+          webhook_id: log.webhook_id,
+          payload: log.payload ?? { retried_from: log.id, event_type: log.event_type },
+        },
+      });
+      if (error) throw error;
+      const ok = (data as { ok?: boolean })?.ok;
+      toast({
+        title: ok ? "Delivery succeeded" : "Delivery still failing",
+        description: ok
+          ? "The webhook accepted the retried payload."
+          : (data as { error?: string })?.error ?? `Status ${(data as { status?: number })?.status ?? "unknown"}`,
+        variant: ok ? "default" : "destructive",
+      });
+      fetchWebhookLogs();
+    } catch (e) {
+      toast({
+        title: "Retry failed",
+        description: e instanceof Error ? e.message : "Could not reach delivery service.",
+        variant: "destructive",
+      });
+    } finally {
+      setRetryingLogId(null);
+    }
   };
 
   const resetForm = () => {
@@ -650,12 +685,12 @@ export default function Webhooks() {
             <CardContent>
               <div className="space-y-2">
                 {webhookLogs.map(log => (
-                  <div key={log.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                    <div className="flex items-center gap-3">
+                  <div key={log.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 py-2 border-b border-border last:border-0">
+                    <div className="flex items-center gap-3 flex-wrap">
                       {log.success ? (
-                        <CheckCircle2 className="h-4 w-4 text-success" />
+                        <CheckCircle2 className="h-4 w-4 text-success shrink-0" aria-label="Success" />
                       ) : (
-                        <XCircle className="h-4 w-4 text-destructive" />
+                        <XCircle className="h-4 w-4 text-destructive shrink-0" aria-label="Failed" />
                       )}
                       <Badge variant="outline">{log.event_type.replace(/_/g, " ")}</Badge>
                       {log.response_status && (
@@ -663,10 +698,34 @@ export default function Webhooks() {
                           Status: {log.response_status}
                         </span>
                       )}
+                      {!log.success && log.error_message && (
+                        <span className="text-xs text-destructive truncate max-w-[260px]" title={log.error_message}>
+                          {log.error_message}
+                        </span>
+                      )}
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(log.created_at).toLocaleString()}
-                    </span>
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(log.created_at).toLocaleString()}
+                      </span>
+                      {!log.success && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 gap-1.5"
+                          onClick={() => handleRetryDelivery(log)}
+                          disabled={retryingLogId === log.id}
+                          aria-label={`Retry delivery for ${log.event_type}`}
+                        >
+                          {retryingLogId === log.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                          ) : (
+                            <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+                          )}
+                          Retry
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
