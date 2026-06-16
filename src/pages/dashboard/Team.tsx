@@ -365,16 +365,18 @@ export default function Team() {
                       size="icon"
                       className="h-8 w-8"
                       onClick={() => openEditDialog(member)}
+                      aria-label={`Edit ${member.name}`}
                     >
-                      <Edit className="w-4 h-4" />
+                      <Edit className="w-4 h-4" aria-hidden="true" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-destructive hover:text-destructive"
                       onClick={() => confirmDelete(member)}
+                      aria-label={`Remove ${member.name}`}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-4 h-4" aria-hidden="true" />
                     </Button>
                   </div>
                 </div>
