@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Plus, Search, Loader2, Trash2, Edit, AlertTriangle, CheckCircle2, Clock, AlertCircle, Filter } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CardGridSkeleton } from "@/components/ui/data-state";
 
 type ComplaintStatus = "open" | "in-progress" | "resolved" | "closed";
 type ComplaintPriority = "low" | "medium" | "high" | "urgent";
@@ -226,8 +227,8 @@ export default function Complaints() {
     return (
       <div>
         <DashboardHeader title="Complaints & Maintenance" subtitle="Track and resolve complaints and service requests" />
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="p-6">
+          <CardGridSkeleton count={6} />
         </div>
       </div>
     );
@@ -438,11 +439,11 @@ export default function Complaints() {
                       )}
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(complaint)}>
-                        <Edit className="w-4 h-4" />
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(complaint)} aria-label={`Edit ${complaint.title}`}>
+                        <Edit className="w-4 h-4" aria-hidden="true" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => confirmDelete(complaint)}>
-                        <Trash2 className="w-4 h-4" />
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => confirmDelete(complaint)} aria-label={`Delete ${complaint.title}`}>
+                        <Trash2 className="w-4 h-4" aria-hidden="true" />
                       </Button>
                     </div>
                   </div>
