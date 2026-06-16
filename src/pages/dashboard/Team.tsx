@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Plus, Search, Mail, Loader2, Trash2, Edit, Users } from "lucide-react";
 import { z } from "zod";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CardGridSkeleton, ErrorState } from "@/components/ui/data-state";
 
 interface TeamMember {
   id: string;
@@ -52,54 +54,38 @@ const departments = [
 
 export default function Team() {
   useDocumentTitle("Team");
-  const [members, setMembers] = useState<TeamMember[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; member: TeamMember | null; isDeleting: boolean }>({
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; member: TeamMember | null }>({
     open: false,
     member: null,
-    isDeleting: false,
   });
-  
-  // Form state
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("");
   const [department, setDepartment] = useState("");
-  
+
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const teamKey = ["team-members", user?.id] as const;
 
-  useEffect(() => {
-    if (user) {
-      fetchMembers();
-    }
-  }, [user]);
-
-  const fetchMembers = async () => {
-    if (!user) return;
-    
-    setIsLoading(true);
-    const { data, error } = await supabase
-      .from("team_members")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load team members.",
-        variant: "destructive",
-      });
-    } else {
-      setMembers(data || []);
-    }
-    setIsLoading(false);
-  };
+  const { data: members = [], isLoading, isError, refetch } = useQuery<TeamMember[]>({
+    queryKey: teamKey,
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("team_members")
+        .select("*")
+        .eq("user_id", user!.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as TeamMember[];
+    },
+  });
 
   const resetForm = () => {
     setName("");
@@ -125,27 +111,19 @@ export default function Team() {
 
   const handleSave = async () => {
     if (!user) return;
-    
+
     try {
       nameSchema.parse(name);
       emailSchema.parse(email);
     } catch (err) {
       if (err instanceof z.ZodError) {
-        toast({
-          title: "Validation Error",
-          description: err.errors[0].message,
-          variant: "destructive",
-        });
+        toast({ title: "Validation Error", description: err.errors[0].message, variant: "destructive" });
         return;
       }
     }
 
     if (!role) {
-      toast({
-        title: "Missing Role",
-        description: "Please select a role.",
-        variant: "destructive",
-      });
+      toast({ title: "Missing Role", description: "Please select a role.", variant: "destructive" });
       return;
     }
 
@@ -159,24 +137,14 @@ export default function Team() {
       user_id: user.id,
     };
 
-    let error;
-    if (editingMember) {
-      ({ error } = await supabase
-        .from("team_members")
-        .update(memberData)
-        .eq("id", editingMember.id));
-    } else {
-      ({ error } = await supabase.from("team_members").insert(memberData));
-    }
+    const { error } = editingMember
+      ? await supabase.from("team_members").update(memberData).eq("id", editingMember.id)
+      : await supabase.from("team_members").insert(memberData);
 
     setIsSaving(false);
 
     if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to save team member.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to save team member.", variant: "destructive" });
     } else {
       toast({
         title: editingMember ? "Member Updated" : "Member Added",
@@ -184,34 +152,40 @@ export default function Team() {
       });
       setIsDialogOpen(false);
       resetForm();
-      fetchMembers();
+      queryClient.invalidateQueries({ queryKey: teamKey });
     }
   };
 
   const confirmDelete = (member: TeamMember) => {
-    setDeleteConfirm({ open: true, member, isDeleting: false });
+    setDeleteConfirm({ open: true, member });
   };
 
-  const handleDelete = async () => {
-    if (!deleteConfirm.member) return;
-    
-    setDeleteConfirm(prev => ({ ...prev, isDeleting: true }));
-    const { error } = await supabase.from("team_members").delete().eq("id", deleteConfirm.member.id);
+  const deleteMutation = useMutation({
+    mutationFn: async (memberId: string) => {
+      const { error } = await supabase.from("team_members").delete().eq("id", memberId);
+      if (error) throw error;
+    },
+    onMutate: async (memberId) => {
+      await queryClient.cancelQueries({ queryKey: teamKey });
+      const previous = queryClient.getQueryData<TeamMember[]>(teamKey);
+      queryClient.setQueryData<TeamMember[]>(teamKey, (old) => (old ?? []).filter((m) => m.id !== memberId));
+      return { previous };
+    },
+    onError: (_err, _id, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(teamKey, ctx.previous);
+      toast({ title: "Error", description: "Failed to remove team member.", variant: "destructive" });
+    },
+    onSuccess: () => {
+      toast({ title: "Member Removed", description: `${deleteConfirm.member?.name ?? "Member"} has been removed.` });
+    },
+    onSettled: () => {
+      setDeleteConfirm({ open: false, member: null });
+      queryClient.invalidateQueries({ queryKey: teamKey });
+    },
+  });
 
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to remove team member.",
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Member Removed",
-        description: `${deleteConfirm.member.name} has been removed from your team.`,
-      });
-      setMembers(members.filter(m => m.id !== deleteConfirm.member!.id));
-    }
-    setDeleteConfirm({ open: false, member: null, isDeleting: false });
+  const handleDelete = () => {
+    if (deleteConfirm.member) deleteMutation.mutate(deleteConfirm.member.id);
   };
 
   const filteredMembers = members.filter(
@@ -221,12 +195,12 @@ export default function Team() {
       (member.department?.toLowerCase() || "").includes(searchQuery.toLowerCase())
   );
 
-  if (isLoading) {
+  if (isError) {
     return (
       <div>
         <DashboardHeader title="Team" subtitle="Manage your team members" />
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="p-6">
+          <ErrorState message="We couldn't load your team members." onRetry={() => refetch()} />
         </div>
       </div>
     );
