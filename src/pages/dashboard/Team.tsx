@@ -420,12 +420,12 @@ export default function Team() {
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         open={deleteConfirm.open}
-        onOpenChange={(open) => setDeleteConfirm({ open, member: null, isDeleting: false })}
+        onOpenChange={(open) => setDeleteConfirm({ open, member: null })}
         title="Remove Team Member"
         description={`Are you sure you want to remove "${deleteConfirm.member?.name}" from your team? This action cannot be undone.`}
         confirmLabel="Remove"
         onConfirm={handleDelete}
-        isLoading={deleteConfirm.isDeleting}
+        isLoading={deleteMutation.isPending}
         variant="destructive"
       />
     </div>
