@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Download, Filter, Loader2, History } from "lucide-react";
+import { Download, Filter, History } from "lucide-react";
+import { TableSkeleton } from "@/components/ui/data-state";
 
 interface ActivityRow {
   id: string;
@@ -159,7 +160,7 @@ export default function ActivityLog() {
         <Card>
           <CardContent className="pt-6">
             {isLoading ? (
-              <div className="flex items-center justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+              <TableSkeleton rows={6} columns={5} />
             ) : filtered.length === 0 ? (
               <div className="text-center py-16">
                 <History className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
