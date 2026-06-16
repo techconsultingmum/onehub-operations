@@ -308,7 +308,9 @@ export default function Team() {
         </div>
 
         {/* Empty State */}
-        {members.length === 0 ? (
+        {isLoading ? (
+          <CardGridSkeleton count={6} />
+        ) : members.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
               <Users className="w-8 h-8 text-primary" />
