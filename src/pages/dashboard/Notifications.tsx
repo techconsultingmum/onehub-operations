@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { Button } from "@/components/ui/button";
@@ -11,20 +10,21 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { 
-  Bell, 
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { CardGridSkeleton, EmptyState, ErrorState } from "@/components/ui/data-state";
+import {
+  Bell,
   BellOff,
-  Check, 
+  Check,
   CheckCheck,
-  Trash2, 
-  Loader2,
+  Trash2,
   Info,
   AlertCircle,
   CheckCircle2,
   AlertTriangle,
   Users,
   ListTodo,
-  Clock
+  Clock,
 } from "lucide-react";
 
 interface Notification {
@@ -54,12 +54,12 @@ interface NotificationPreferences {
 }
 
 const typeIcons: Record<string, React.ReactNode> = {
-  info: <Info className="h-4 w-4 text-info" />,
-  success: <CheckCircle2 className="h-4 w-4 text-success" />,
-  warning: <AlertTriangle className="h-4 w-4 text-warning" />,
-  error: <AlertCircle className="h-4 w-4 text-destructive" />,
-  task: <ListTodo className="h-4 w-4 text-primary" />,
-  team: <Users className="h-4 w-4 text-accent-foreground" />,
+  info: <Info className="h-4 w-4 text-info" aria-hidden="true" />,
+  success: <CheckCircle2 className="h-4 w-4 text-success" aria-hidden="true" />,
+  warning: <AlertTriangle className="h-4 w-4 text-warning" aria-hidden="true" />,
+  error: <AlertCircle className="h-4 w-4 text-destructive" aria-hidden="true" />,
+  task: <ListTodo className="h-4 w-4 text-primary" aria-hidden="true" />,
+  team: <Users className="h-4 w-4 text-accent-foreground" aria-hidden="true" />,
 };
 
 const actionLabels: Record<string, string> = {
@@ -70,175 +70,197 @@ const actionLabels: Record<string, string> = {
   assigned: "Assigned",
 };
 
+const defaultPrefs: NotificationPreferences = {
+  email_notifications: true,
+  push_notifications: true,
+  task_updates: true,
+  team_updates: true,
+  weekly_digest: false,
+};
+
+function formatTimeAgo(dateString: string) {
+  const date = new Date(dateString);
+  const diff = Date.now() - date.getTime();
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days < 7) return `${days}d ago`;
+  return date.toLocaleDateString();
+}
+
 export default function Notifications() {
   useDocumentTitle("Notifications");
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [activities, setActivities] = useState<ActivityItem[]>([]);
-  const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSavingPrefs, setIsSavingPrefs] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    if (user) {
-      fetchData();
-    }
-  }, [user]);
+  const notifKey = ["notifications", user?.id];
+  const activityKey = ["activity-feed", user?.id];
+  const prefsKey = ["notification-prefs", user?.id];
 
-  const fetchData = async () => {
-    if (!user) return;
-
-    const [notifResult, activityResult, prefResult] = await Promise.all([
-      supabase
+  const notificationsQuery = useQuery({
+    queryKey: notifKey,
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
         .from("notifications")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", user!.id)
         .order("created_at", { ascending: false })
-        .limit(50),
-      supabase
+        .limit(50);
+      if (error) throw error;
+      return (data || []) as Notification[];
+    },
+  });
+
+  const activityQuery = useQuery({
+    queryKey: activityKey,
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
         .from("activity_feed")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", user!.id)
         .order("created_at", { ascending: false })
-        .limit(50),
-      supabase
+        .limit(50);
+      if (error) throw error;
+      return (data || []) as ActivityItem[];
+    },
+  });
+
+  const prefsQuery = useQuery({
+    queryKey: prefsKey,
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
         .from("notification_preferences")
         .select("*")
-        .eq("user_id", user.id)
-        .maybeSingle(),
-    ]);
+        .eq("user_id", user!.id)
+        .maybeSingle();
+      if (error) throw error;
+      if (data) return data as NotificationPreferences;
+      await supabase
+        .from("notification_preferences")
+        .insert({ user_id: user!.id, ...defaultPrefs });
+      return defaultPrefs;
+    },
+  });
 
-    setNotifications(notifResult.data || []);
-    setActivities(activityResult.data || []);
-    
-    if (prefResult.data) {
-      setPreferences(prefResult.data);
-    } else {
-      // Create default preferences
-      const defaultPrefs: NotificationPreferences = {
-        email_notifications: true,
-        push_notifications: true,
-        task_updates: true,
-        team_updates: true,
-        weekly_digest: false,
-      };
-      setPreferences(defaultPrefs);
-      await supabase.from("notification_preferences").insert({
-        user_id: user.id,
-        ...defaultPrefs,
-      });
-    }
-    
-    setIsLoading(false);
-  };
+  const notifications = notificationsQuery.data ?? [];
+  const activities = activityQuery.data ?? [];
+  const preferences = prefsQuery.data;
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const markAsRead = async (id: string) => {
-    await supabase
-      .from("notifications")
-      .update({ read: true })
-      .eq("id", id);
-    
-    setNotifications(prev => 
-      prev.map(n => n.id === id ? { ...n, read: true } : n)
-    );
-  };
+  const markAsReadMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("notifications").update({ read: true }).eq("id", id);
+      if (error) throw error;
+    },
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: notifKey });
+      const previous = queryClient.getQueryData<Notification[]>(notifKey);
+      queryClient.setQueryData<Notification[]>(notifKey, (old) =>
+        (old ?? []).map((n) => (n.id === id ? { ...n, read: true } : n))
+      );
+      return { previous };
+    },
+    onError: (_e, _id, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(notifKey, ctx.previous);
+      toast({ title: "Error", description: "Failed to mark as read.", variant: "destructive" });
+    },
+  });
 
-  const markAllAsRead = async () => {
-    if (!user) return;
-    
-    await supabase
-      .from("notifications")
-      .update({ read: true })
-      .eq("user_id", user.id)
-      .eq("read", false);
-    
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    
-    toast({
-      title: "All Marked as Read",
-      description: "All notifications have been marked as read.",
-    });
-  };
+  const markAllReadMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("notifications")
+        .update({ read: true })
+        .eq("user_id", user!.id)
+        .eq("read", false);
+      if (error) throw error;
+    },
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: notifKey });
+      const previous = queryClient.getQueryData<Notification[]>(notifKey);
+      queryClient.setQueryData<Notification[]>(notifKey, (old) =>
+        (old ?? []).map((n) => ({ ...n, read: true }))
+      );
+      return { previous };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(notifKey, ctx.previous);
+      toast({ title: "Error", description: "Failed to mark all as read.", variant: "destructive" });
+    },
+    onSuccess: () =>
+      toast({ title: "All Marked as Read", description: "All notifications have been marked as read." }),
+  });
 
-  const deleteNotification = async (id: string) => {
-    await supabase
-      .from("notifications")
-      .delete()
-      .eq("id", id);
-    
-    setNotifications(prev => prev.filter(n => n.id !== id));
-  };
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("notifications").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: notifKey });
+      const previous = queryClient.getQueryData<Notification[]>(notifKey);
+      queryClient.setQueryData<Notification[]>(notifKey, (old) =>
+        (old ?? []).filter((n) => n.id !== id)
+      );
+      return { previous };
+    },
+    onError: (_e, _id, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(notifKey, ctx.previous);
+      toast({ title: "Error", description: "Failed to delete notification.", variant: "destructive" });
+    },
+  });
 
-  const clearAllNotifications = async () => {
-    if (!user) return;
-    
-    await supabase
-      .from("notifications")
-      .delete()
-      .eq("user_id", user.id);
-    
-    setNotifications([]);
-    
-    toast({
-      title: "Notifications Cleared",
-      description: "All notifications have been deleted.",
-    });
-  };
+  const clearAllMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("notifications").delete().eq("user_id", user!.id);
+      if (error) throw error;
+    },
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: notifKey });
+      const previous = queryClient.getQueryData<Notification[]>(notifKey);
+      queryClient.setQueryData<Notification[]>(notifKey, []);
+      return { previous };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(notifKey, ctx.previous);
+      toast({ title: "Error", description: "Failed to clear notifications.", variant: "destructive" });
+    },
+    onSuccess: () =>
+      toast({ title: "Notifications Cleared", description: "All notifications have been deleted." }),
+  });
 
-  const updatePreference = async (key: keyof NotificationPreferences, value: boolean) => {
-    if (!user || !preferences) return;
-    
-    setIsSavingPrefs(true);
-    setPreferences(prev => prev ? { ...prev, [key]: value } : null);
+  const prefMutation = useMutation({
+    mutationFn: async ({ key, value }: { key: keyof NotificationPreferences; value: boolean }) => {
+      const { error } = await supabase
+        .from("notification_preferences")
+        .update({ [key]: value })
+        .eq("user_id", user!.id);
+      if (error) throw error;
+    },
+    onMutate: async ({ key, value }) => {
+      await queryClient.cancelQueries({ queryKey: prefsKey });
+      const previous = queryClient.getQueryData<NotificationPreferences>(prefsKey);
+      queryClient.setQueryData<NotificationPreferences>(prefsKey, (old) =>
+        old ? { ...old, [key]: value } : old
+      );
+      return { previous };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(prefsKey, ctx.previous);
+      toast({ title: "Error", description: "Failed to update preferences.", variant: "destructive" });
+    },
+  });
 
-    const { error } = await supabase
-      .from("notification_preferences")
-      .update({ [key]: value })
-      .eq("user_id", user.id);
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update preferences.",
-        variant: "destructive",
-      });
-      setPreferences(prev => prev ? { ...prev, [key]: !value } : null);
-    }
-    
-    setIsSavingPrefs(false);
-  };
-
-  const unreadCount = notifications.filter(n => !n.read).length;
-
-  const formatTimeAgo = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-
-    if (minutes < 1) return "Just now";
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    if (days < 7) return `${days}d ago`;
-    return date.toLocaleDateString();
-  };
-
-  if (isLoading) {
-    return (
-      <div>
-        <DashboardHeader
-          title="Notifications"
-          subtitle="View and manage your notifications and activity"
-        />
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </div>
-    );
-  }
+  const isLoading =
+    notificationsQuery.isLoading || activityQuery.isLoading || prefsQuery.isLoading;
+  const isError = notificationsQuery.isError || activityQuery.isError || prefsQuery.isError;
 
   return (
     <div>
@@ -248,238 +270,254 @@ export default function Notifications() {
       />
 
       <div className="p-6">
-        <Tabs defaultValue="notifications" className="space-y-6">
-          <div className="flex items-center justify-between">
-            <TabsList>
-              <TabsTrigger value="notifications" className="gap-2">
-                <Bell className="h-4 w-4" />
-                Notifications
-                {unreadCount > 0 && (
-                  <Badge variant="default" className="ml-1 px-1.5 py-0.5 text-xs">
-                    {unreadCount}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="activity" className="gap-2">
-                <Clock className="h-4 w-4" />
-                Activity Feed
-              </TabsTrigger>
-              <TabsTrigger value="preferences" className="gap-2">
-                <BellOff className="h-4 w-4" />
-                Preferences
-              </TabsTrigger>
-            </TabsList>
-            
-            {notifications.length > 0 && (
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={markAllAsRead} className="gap-2">
-                  <CheckCheck className="h-4 w-4" />
-                  Mark All Read
-                </Button>
-                <Button variant="outline" size="sm" onClick={clearAllNotifications} className="gap-2 text-destructive">
-                  <Trash2 className="h-4 w-4" />
-                  Clear All
-                </Button>
-              </div>
-            )}
-          </div>
+        {isLoading ? (
+          <CardGridSkeleton count={4} />
+        ) : isError ? (
+          <ErrorState
+            onRetry={() => {
+              notificationsQuery.refetch();
+              activityQuery.refetch();
+              prefsQuery.refetch();
+            }}
+          />
+        ) : (
+          <Tabs defaultValue="notifications" className="space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <TabsList>
+                <TabsTrigger value="notifications" className="gap-2">
+                  <Bell className="h-4 w-4" aria-hidden="true" />
+                  Notifications
+                  {unreadCount > 0 && (
+                    <Badge
+                      variant="default"
+                      className="ml-1 px-1.5 py-0.5 text-xs"
+                      aria-label={`${unreadCount} unread`}
+                    >
+                      {unreadCount}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="activity" className="gap-2">
+                  <Clock className="h-4 w-4" aria-hidden="true" />
+                  Activity Feed
+                </TabsTrigger>
+                <TabsTrigger value="preferences" className="gap-2">
+                  <BellOff className="h-4 w-4" aria-hidden="true" />
+                  Preferences
+                </TabsTrigger>
+              </TabsList>
 
-          <TabsContent value="notifications" className="space-y-4">
-            {notifications.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <Bell className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Notifications</h3>
-                  <p className="text-muted-foreground text-center">
-                    You're all caught up! New notifications will appear here.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-2">
-                {notifications.map(notification => (
-                  <Card 
-                    key={notification.id} 
-                    className={`transition-colors ${!notification.read ? "bg-primary/5 border-primary/20" : ""}`}
+              {notifications.length > 0 && (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => markAllReadMutation.mutate()}
+                    disabled={markAllReadMutation.isPending || unreadCount === 0}
+                    className="gap-2"
                   >
-                    <CardContent className="p-4">
-                      <div className="flex items-start gap-4">
-                        <div className="mt-1">
-                          {typeIcons[notification.type] || typeIcons.info}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <h4 className="font-medium">{notification.title}</h4>
-                              <p className="text-sm text-muted-foreground mt-1">
-                                {notification.message}
-                              </p>
+                    <CheckCheck className="h-4 w-4" aria-hidden="true" />
+                    Mark All Read
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => clearAllMutation.mutate()}
+                    disabled={clearAllMutation.isPending}
+                    className="gap-2 text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />
+                    Clear All
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            <TabsContent value="notifications" className="space-y-4">
+              {notifications.length === 0 ? (
+                <Card>
+                  <CardContent className="p-0">
+                    <EmptyState
+                      icon={<Bell className="w-7 h-7" aria-hidden="true" />}
+                      title="No Notifications"
+                      description="You're all caught up! New notifications will appear here."
+                    />
+                  </CardContent>
+                </Card>
+              ) : (
+                <ul className="space-y-2" aria-live="polite">
+                  {notifications.map((notification) => (
+                    <li key={notification.id}>
+                      <Card
+                        className={`transition-colors ${
+                          !notification.read ? "bg-primary/5 border-primary/20" : ""
+                        }`}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-start gap-4">
+                            <div className="mt-1">
+                              {typeIcons[notification.type] || typeIcons.info}
                             </div>
-                            <span className="text-xs text-muted-foreground whitespace-nowrap">
-                              {formatTimeAgo(notification.created_at)}
-                            </span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <h4 className="font-medium">{notification.title}</h4>
+                                  <p className="text-sm text-muted-foreground mt-1">
+                                    {notification.message}
+                                  </p>
+                                </div>
+                                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                  {formatTimeAgo(notification.created_at)}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {!notification.read && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => markAsReadMutation.mutate(notification.id)}
+                                  aria-label={`Mark "${notification.title}" as read`}
+                                >
+                                  <Check className="h-4 w-4" aria-hidden="true" />
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => deleteMutation.mutate(notification.id)}
+                                className="text-destructive hover:text-destructive"
+                                aria-label={`Delete "${notification.title}"`}
+                              >
+                                <Trash2 className="h-4 w-4" aria-hidden="true" />
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          {!notification.read && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => markAsRead(notification.id)}
-                              title="Mark as read"
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => deleteNotification(notification.id)}
-                            className="text-destructive hover:text-destructive"
-                            title="Delete"
+                        </CardContent>
+                      </Card>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </TabsContent>
+
+            <TabsContent value="activity" className="space-y-4">
+              {activities.length === 0 ? (
+                <Card>
+                  <CardContent className="p-0">
+                    <EmptyState
+                      icon={<Clock className="w-7 h-7" aria-hidden="true" />}
+                      title="No Activity Yet"
+                      description="Your activity history will appear here."
+                    />
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card>
+                  <CardContent className="p-0">
+                    <ul className="divide-y divide-border">
+                      {activities.map((activity) => (
+                        <li key={activity.id} className="p-4 flex items-center gap-4">
+                          <div
+                            className="w-8 h-8 rounded-full bg-muted flex items-center justify-center"
+                            aria-hidden="true"
                           >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
+                            {activity.entity_type === "task" && <ListTodo className="h-4 w-4" />}
+                            {activity.entity_type === "team_member" && <Users className="h-4 w-4" />}
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm">
+                              <span className="font-medium">
+                                {actionLabels[activity.action] || activity.action}
+                              </span>{" "}
+                              <span className="text-muted-foreground">
+                                {activity.entity_type.replace("_", " ")}
+                              </span>
+                              {activity.entity_name && (
+                                <>
+                                  {": "}
+                                  <span className="font-medium">{activity.entity_name}</span>
+                                </>
+                              )}
+                            </p>
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {formatTimeAgo(activity.created_at)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
 
-          <TabsContent value="activity" className="space-y-4">
-            {activities.length === 0 ? (
+            <TabsContent value="preferences">
               <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <Clock className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Activity Yet</h3>
-                  <p className="text-muted-foreground text-center">
-                    Your activity history will appear here.
-                  </p>
+                <CardHeader>
+                  <CardTitle>Notification Preferences</CardTitle>
+                  <CardDescription>
+                    Control how and when you receive notifications
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {preferences && (
+                    <>
+                      {(
+                        [
+                          {
+                            key: "email_notifications" as const,
+                            label: "Email Notifications",
+                            desc: "Receive email updates about your tasks and team",
+                          },
+                          {
+                            key: "push_notifications" as const,
+                            label: "Push Notifications",
+                            desc: "Get notified about important updates in your browser",
+                          },
+                          {
+                            key: "task_updates" as const,
+                            label: "Task Updates",
+                            desc: "Notify when tasks are created, updated, or completed",
+                          },
+                          {
+                            key: "team_updates" as const,
+                            label: "Team Updates",
+                            desc: "Notify when team members are added or modified",
+                          },
+                          {
+                            key: "weekly_digest" as const,
+                            label: "Weekly Digest",
+                            desc: "Receive a weekly summary of your progress",
+                          },
+                        ] as const
+                      ).map((p, idx, arr) => (
+                        <div key={p.key}>
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="min-w-0">
+                              <Label htmlFor={`pref-${p.key}`} className="font-medium">
+                                {p.label}
+                              </Label>
+                              <p className="text-sm text-muted-foreground">{p.desc}</p>
+                            </div>
+                            <Switch
+                              id={`pref-${p.key}`}
+                              checked={preferences[p.key]}
+                              onCheckedChange={(v) => prefMutation.mutate({ key: p.key, value: v })}
+                              disabled={prefMutation.isPending}
+                              aria-label={p.label}
+                            />
+                          </div>
+                          {idx < arr.length - 1 && <Separator className="mt-6" />}
+                        </div>
+                      ))}
+                    </>
+                  )}
                 </CardContent>
               </Card>
-            ) : (
-              <Card>
-                <CardContent className="p-0">
-                  <div className="divide-y divide-border">
-                    {activities.map(activity => (
-                      <div key={activity.id} className="p-4 flex items-center gap-4">
-                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                          {activity.entity_type === "task" && <ListTodo className="h-4 w-4" />}
-                          {activity.entity_type === "team_member" && <Users className="h-4 w-4" />}
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm">
-                            <span className="font-medium">{actionLabels[activity.action] || activity.action}</span>
-                            {" "}
-                            <span className="text-muted-foreground">{activity.entity_type.replace("_", " ")}</span>
-                            {activity.entity_name && (
-                              <>
-                                {": "}
-                                <span className="font-medium">{activity.entity_name}</span>
-                              </>
-                            )}
-                          </p>
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          {formatTimeAgo(activity.created_at)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          <TabsContent value="preferences">
-            <Card>
-              <CardHeader>
-                <CardTitle>Notification Preferences</CardTitle>
-                <CardDescription>
-                  Control how and when you receive notifications
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {preferences && (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="font-medium">Email Notifications</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Receive email updates about your tasks and team
-                        </p>
-                      </div>
-                      <Switch
-                        checked={preferences.email_notifications}
-                        onCheckedChange={(v) => updatePreference("email_notifications", v)}
-                        disabled={isSavingPrefs}
-                      />
-                    </div>
-                    <Separator />
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="font-medium">Push Notifications</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Get notified about important updates in your browser
-                        </p>
-                      </div>
-                      <Switch
-                        checked={preferences.push_notifications}
-                        onCheckedChange={(v) => updatePreference("push_notifications", v)}
-                        disabled={isSavingPrefs}
-                      />
-                    </div>
-                    <Separator />
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="font-medium">Task Updates</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Notify when tasks are created, updated, or completed
-                        </p>
-                      </div>
-                      <Switch
-                        checked={preferences.task_updates}
-                        onCheckedChange={(v) => updatePreference("task_updates", v)}
-                        disabled={isSavingPrefs}
-                      />
-                    </div>
-                    <Separator />
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="font-medium">Team Updates</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Notify when team members are added or modified
-                        </p>
-                      </div>
-                      <Switch
-                        checked={preferences.team_updates}
-                        onCheckedChange={(v) => updatePreference("team_updates", v)}
-                        disabled={isSavingPrefs}
-                      />
-                    </div>
-                    <Separator />
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="font-medium">Weekly Digest</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Receive a weekly summary of your progress
-                        </p>
-                      </div>
-                      <Switch
-                        checked={preferences.weekly_digest}
-                        onCheckedChange={(v) => updatePreference("weekly_digest", v)}
-                        disabled={isSavingPrefs}
-                      />
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+            </TabsContent>
+          </Tabs>
+        )}
       </div>
     </div>
   );
