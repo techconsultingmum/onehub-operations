@@ -44,7 +44,8 @@ interface WebhookData {
   is_active: boolean;
   last_triggered_at: string | null;
   created_at: string;
-  secret_key: string | null;
+  secret_key?: string | null;
+  has_secret?: boolean | null;
 }
 
 interface WebhookLog {
@@ -106,7 +107,7 @@ export default function Webhooks() {
     
     const { data, error } = await supabase
       .from("webhooks")
-      .select("id, name, url, type, events, is_active, last_triggered_at, created_at, secret_key")
+      .select("id, name, url, type, events, is_active, last_triggered_at, created_at, has_secret")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
@@ -601,7 +602,7 @@ export default function Webhooks() {
                           <Badge variant={webhook.is_active ? "default" : "secondary"}>
                             {webhook.is_active ? "Active" : "Paused"}
                           </Badge>
-                          {webhook.secret_key && (
+                          {webhook.has_secret && (
                             <Badge variant="outline" className="gap-1">
                               <Key className="h-3 w-3" />
                               Signed
@@ -632,7 +633,7 @@ export default function Webhooks() {
                         onCheckedChange={(checked) => toggleWebhookActive(webhook.id, checked)}
                         aria-label={`Toggle ${webhook.name}`}
                       />
-                      {webhook.secret_key && (
+                      {webhook.has_secret && (
                         <Button
                           variant="ghost"
                           size="icon"

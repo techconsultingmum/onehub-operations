@@ -422,6 +422,7 @@ export type Database = {
         Row: {
           created_at: string
           events: string[]
+          has_secret: boolean | null
           headers: Json | null
           id: string
           is_active: boolean
@@ -436,6 +437,7 @@ export type Database = {
         Insert: {
           created_at?: string
           events?: string[]
+          has_secret?: boolean | null
           headers?: Json | null
           id?: string
           is_active?: boolean
@@ -450,6 +452,7 @@ export type Database = {
         Update: {
           created_at?: string
           events?: string[]
+          has_secret?: boolean | null
           headers?: Json | null
           id?: string
           is_active?: boolean
