@@ -42,7 +42,7 @@ const RANGE_LABEL: Record<RangeKey, string> = {
   all: "All time",
 };
 
-interface TaskRow {
+interface TaskRow extends Record<string, unknown> {
   id: string;
   title: string | null;
   status: string | null;
