@@ -428,7 +428,7 @@ export type Database = {
           is_active: boolean
           last_triggered_at: string | null
           name: string
-          secret_key: string | null
+          secret_hash: string | null
           type: string
           updated_at: string
           url: string
@@ -443,7 +443,7 @@ export type Database = {
           is_active?: boolean
           last_triggered_at?: string | null
           name: string
-          secret_key?: string | null
+          secret_hash?: string | null
           type?: string
           updated_at?: string
           url: string
@@ -458,7 +458,7 @@ export type Database = {
           is_active?: boolean
           last_triggered_at?: string | null
           name?: string
-          secret_key?: string | null
+          secret_hash?: string | null
           type?: string
           updated_at?: string
           url?: string

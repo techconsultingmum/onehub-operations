@@ -44,7 +44,6 @@ interface WebhookData {
   is_active: boolean;
   last_triggered_at: string | null;
   created_at: string;
-  secret_key?: string | null;
   has_secret?: boolean | null;
 }
 
@@ -259,7 +258,7 @@ export default function Webhooks() {
           type,
           events: selectedEvents,
           user_id: user.id,
-          secret_key: secretKeyHash,
+          secret_hash: secretKeyHash,
         }));
     }
 
@@ -296,7 +295,7 @@ export default function Webhooks() {
     
     const { error } = await supabase
       .from("webhooks")
-      .update({ secret_key: newHash })
+      .update({ secret_hash: newHash })
       .eq("id", webhookId);
 
     if (error) {
