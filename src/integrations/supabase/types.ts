@@ -422,13 +422,12 @@ export type Database = {
         Row: {
           created_at: string
           events: string[]
-          has_secret: boolean | null
+          has_secret: boolean
           headers: Json | null
           id: string
           is_active: boolean
           last_triggered_at: string | null
           name: string
-          secret_key: string | null
           type: string
           updated_at: string
           url: string
@@ -437,13 +436,12 @@ export type Database = {
         Insert: {
           created_at?: string
           events?: string[]
-          has_secret?: boolean | null
+          has_secret?: boolean
           headers?: Json | null
           id?: string
           is_active?: boolean
           last_triggered_at?: string | null
           name: string
-          secret_key?: string | null
           type?: string
           updated_at?: string
           url: string
@@ -452,13 +450,12 @@ export type Database = {
         Update: {
           created_at?: string
           events?: string[]
-          has_secret?: boolean | null
+          has_secret?: boolean
           headers?: Json | null
           id?: string
           is_active?: boolean
           last_triggered_at?: string | null
           name?: string
-          secret_key?: string | null
           type?: string
           updated_at?: string
           url?: string
