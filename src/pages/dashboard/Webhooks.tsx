@@ -258,7 +258,7 @@ export default function Webhooks() {
           type,
           events: selectedEvents,
           user_id: user.id,
-          secret_key: secretKeyHash,
+          secret_hash: secretKeyHash,
         }));
     }
 
