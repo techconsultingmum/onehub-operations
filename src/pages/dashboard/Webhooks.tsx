@@ -44,7 +44,6 @@ interface WebhookData {
   is_active: boolean;
   last_triggered_at: string | null;
   created_at: string;
-  secret_key?: string | null;
   has_secret?: boolean | null;
 }
 
