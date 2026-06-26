@@ -295,7 +295,7 @@ export default function Webhooks() {
     
     const { error } = await supabase
       .from("webhooks")
-      .update({ secret_key: newHash })
+      .update({ secret_hash: newHash })
       .eq("id", webhookId);
 
     if (error) {
