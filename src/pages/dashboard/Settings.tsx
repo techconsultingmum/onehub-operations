@@ -322,10 +322,11 @@ export default function SettingsPage() {
                           type="button"
                           variant="ghost"
                           size="icon"
+                          aria-label={`Remove ${typeInfo?.label ?? type}`}
                           className="h-4 w-4 hover:bg-transparent"
                           onClick={() => removeAdditionalType(type)}
                         >
-                          <X className="h-3 w-3" />
+                          <X className="h-3 w-3" aria-hidden="true" />
                         </Button>
                       </Badge>
                     );

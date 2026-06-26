@@ -1,12 +1,29 @@
+import { useState, useMemo } from "react";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { Button } from "@/components/ui/button";
-import { Download, Calendar, TrendingUp, Users, CheckSquare, Clock } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Download, Calendar, TrendingUp, Users, CheckSquare, Clock, ChevronDown } from "lucide-react";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { CardGridSkeleton, ErrorState } from "@/components/ui/data-state";
+import { toCsv, downloadCsv } from "@/lib/csv";
 import {
   ResponsiveContainer,
   PieChart,
@@ -16,8 +33,26 @@ import {
   Tooltip,
 } from "recharts";
 
+type RangeKey = "7" | "30" | "90" | "all";
+
+const RANGE_LABEL: Record<RangeKey, string> = {
+  "7": "Last 7 days",
+  "30": "Last 30 days",
+  "90": "Last 90 days",
+  all: "All time",
+};
+
+interface TaskRow extends Record<string, unknown> {
+  id: string;
+  title: string | null;
+  status: string | null;
+  priority: string | null;
+  due_date: string | null;
+  created_at: string;
+}
+
 interface ReportData {
-  taskStats: { total: number; completed: number; inProgress: number; todo: number };
+  tasks: TaskRow[];
   teamCount: number;
 }
 
@@ -25,33 +60,54 @@ export default function Reports() {
   useDocumentTitle("Reports");
   const { user } = useAuth();
   const { toast } = useToast();
+  const [range, setRange] = useState<RangeKey>("all");
 
-  const { data, isLoading, isError, refetch } = useQuery<ReportData>({
-    queryKey: ["reports", user?.id],
+  const sinceIso = useMemo(() => {
+    if (range === "all") return null;
+    const d = new Date();
+    d.setDate(d.getDate() - Number(range));
+    return d.toISOString();
+  }, [range]);
+
+  const { data, isLoading, isError, refetch, isFetching } = useQuery<ReportData>({
+    queryKey: ["reports", user?.id, range],
     enabled: !!user,
     queryFn: async () => {
+      let taskQuery = supabase
+        .from("tasks")
+        .select("id, title, status, priority, due_date, created_at")
+        .eq("user_id", user!.id)
+        .order("created_at", { ascending: false })
+        .limit(5000);
+      if (sinceIso) taskQuery = taskQuery.gte("created_at", sinceIso);
+
       const [tasksRes, teamRes] = await Promise.all([
-        supabase.from("tasks").select("status").eq("user_id", user!.id),
-        supabase.from("team_members").select("id", { count: "exact", head: true }).eq("user_id", user!.id),
+        taskQuery,
+        supabase
+          .from("team_members")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user!.id),
       ]);
       if (tasksRes.error) throw tasksRes.error;
       if (teamRes.error) throw teamRes.error;
-      const taskList = tasksRes.data ?? [];
       return {
-        taskStats: {
-          total: taskList.length,
-          completed: taskList.filter((t) => t.status === "completed").length,
-          inProgress: taskList.filter((t) => t.status === "in-progress").length,
-          todo: taskList.filter((t) => t.status === "todo").length,
-        },
+        tasks: (tasksRes.data ?? []) as TaskRow[],
         teamCount: teamRes.count ?? 0,
       };
     },
   });
 
-  const taskStats = data?.taskStats ?? { total: 0, completed: 0, inProgress: 0, todo: 0 };
+  const tasks = data?.tasks ?? [];
   const teamCount = data?.teamCount ?? 0;
-  const completionRate = taskStats.total > 0 ? Math.round((taskStats.completed / taskStats.total) * 100) : 0;
+  const taskStats = useMemo(() => ({
+    total: tasks.length,
+    completed: tasks.filter((t) => t.status === "completed").length,
+    inProgress: tasks.filter((t) => t.status === "in-progress").length,
+    todo: tasks.filter((t) => t.status === "todo").length,
+  }), [tasks]);
+  const completionRate = taskStats.total > 0
+    ? Math.round((taskStats.completed / taskStats.total) * 100)
+    : 0;
 
   const distributionData = [
     { name: "Completed", value: taskStats.completed, color: "hsl(var(--success))" },
@@ -66,23 +122,67 @@ export default function Reports() {
     { label: "Team Members", value: teamCount.toString(), icon: Users },
   ];
 
-  const handleExport = () => {
-    const reportData = {
+  const stamp = () => new Date().toISOString().split("T")[0];
+
+  const exportSummaryCsv = () => {
+    const csv = toCsv(
+      [
+        { metric: "Total Tasks", value: taskStats.total },
+        { metric: "Completed", value: taskStats.completed },
+        { metric: "In Progress", value: taskStats.inProgress },
+        { metric: "To Do", value: taskStats.todo },
+        { metric: "Completion Rate", value: `${completionRate}%` },
+        { metric: "Team Members", value: teamCount },
+        { metric: "Range", value: RANGE_LABEL[range] },
+        { metric: "Generated At", value: new Date().toISOString() },
+      ],
+      [
+        { key: "metric", header: "Metric" },
+        { key: "value", header: "Value" },
+      ],
+    );
+    downloadCsv(`report-summary_${stamp()}.csv`, csv);
+    toast({ title: "Summary exported", description: "CSV downloaded." });
+  };
+
+  const exportTasksCsv = () => {
+    if (tasks.length === 0) {
+      toast({
+        title: "Nothing to export",
+        description: "No tasks in the selected range.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const csv = toCsv(tasks, [
+      { key: "id", header: "ID" },
+      { key: "title", header: "Title" },
+      { key: "status", header: "Status" },
+      { key: "priority", header: "Priority" },
+      { key: "due_date", header: "Due Date" },
+      { key: "created_at", header: "Created At" },
+    ]);
+    downloadCsv(`tasks_${range}_${stamp()}.csv`, csv);
+    toast({ title: "Tasks exported", description: `${tasks.length} rows downloaded.` });
+  };
+
+  const exportTasksJson = () => {
+    const payload = {
       generatedAt: new Date().toISOString(),
-      tasks: taskStats,
-      completionRate: `${completionRate}%`,
-      teamMembers: teamCount,
+      range: RANGE_LABEL[range],
+      summary: { ...taskStats, completionRate: `${completionRate}%`, teamCount },
+      tasks,
     };
-    const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `report_${new Date().toISOString().split("T")[0]}.json`;
+    a.download = `report_${stamp()}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast({ title: "Report Exported", description: "Your report has been downloaded." });
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast({ title: "Report exported", description: "JSON downloaded." });
   };
 
   return (
@@ -92,15 +192,34 @@ export default function Reports() {
       <div className="p-6 space-y-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <Button variant="outline" className="gap-2">
-              <Calendar className="w-4 h-4" aria-hidden="true" />
-              All Time
-            </Button>
+            <Calendar className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+            <Select value={range} onValueChange={(v) => setRange(v as RangeKey)}>
+              <SelectTrigger className="w-[180px]" aria-label="Date range">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(RANGE_LABEL) as RangeKey[]).map((k) => (
+                  <SelectItem key={k} value={k}>{RANGE_LABEL[k]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <Button onClick={handleExport} className="gap-2" disabled={isLoading || isError}>
-            <Download className="w-4 h-4" aria-hidden="true" />
-            Export Report
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="gap-2" disabled={isLoading || isError}>
+                <Download className="w-4 h-4" aria-hidden="true" />
+                Export
+                <ChevronDown className="w-4 h-4 opacity-70" aria-hidden="true" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Export {RANGE_LABEL[range]}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={exportSummaryCsv}>Summary (CSV)</DropdownMenuItem>
+              <DropdownMenuItem onClick={exportTasksCsv}>Tasks (CSV)</DropdownMenuItem>
+              <DropdownMenuItem onClick={exportTasksJson}>Full report (JSON)</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {isLoading ? (
@@ -109,7 +228,10 @@ export default function Reports() {
           <ErrorState message="We couldn't load your report data." onRetry={() => refetch()} />
         ) : (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+              aria-busy={isFetching}
+            >
               {metrics.map((metric) => (
                 <div key={metric.label} className="bg-card border border-border rounded-xl p-6">
                   <div className="flex items-start justify-between">
@@ -180,9 +302,9 @@ export default function Reports() {
                 <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
                   <TrendingUp className="w-8 h-8 text-primary" aria-hidden="true" />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">No data yet</h3>
+                <h3 className="text-lg font-semibold mb-2">No data in this range</h3>
                 <p className="text-muted-foreground max-w-sm mx-auto">
-                  Start creating tasks and adding team members to see your analytics and reports here.
+                  Try a wider date range or create tasks to populate your analytics.
                 </p>
               </div>
             )}
